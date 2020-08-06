@@ -1,0 +1,469 @@
+CREATE OR REPLACE PROCEDURE SP_ENRO_REG_CHECK IS
+
+    /******************************************************************************
+       프로그램명 : SP_ENRO_REG_CHECK 
+         수행목적 : 등록금 정보를  email을 발송한다
+         수행결과 : 호출 
+           INPUT  : 
+          OUTPUT  :                
+    ------------------------------------------------------------------------------
+        수정일자     수정자    수정내용
+    ------------------------------------------------------------------------------
+        2014.03.04   이종표    최초 작성
+        2015.10.14   권순태    발송사용자부서코드(SEND_USER_DEPT_CD = '0040'(재무과)) 항목 추가 
+        2019.08.22   박용주    CH1906-00109 - B111354,B111459,B111829 재무:김윤정, 학사:유진아 장학복지:이명철 추가
+                               DBMS_JOB No:203 INTERVAL:NEXT_DAY(TRUNC(SYSDATE),'MONDAY')+14/25 매주 월요일,14시 실행 
+    ******************************************************************************/
+
+--    V_INPT_ID VARCHAR2(20) := 'SP_ENRO_REG_CHECK'; /* 수정자S DR_RTIME_SUNNAP */
+--    V_PGM_ID  VARCHAR2(100) := 'SP_ENRO_REG_CHECK';
+    V_ENRO_TOT_ERROR_COUNT NUMBER(5);
+    V_ENRO_REG_ERROR_COUNT NUMBER(5);
+    V_ERROR_COUNT NUMBER(5);
+--    V_ENRO_REG_TABLE VARCHAR2(300);
+    V_SEND_RPST_NO SSTM070.SEND_RPST_NO %TYPE; /* 발송대표번호 */
+    V_SEND_NO      SSTM070.SEND_NO %TYPE; /* 발송번호 */
+    V_SEND_CTNT SSTM070.SEND_CTNT %TYPE; /* 발송내용 */
+--    V_REQ_CTNT  VARCHAR2(4000); /* 요청처리내용 */
+    V_REQ_STUNO VARCHAR2(4000); /* 오류해당학번 */
+--    V_OUT_CODE VARCHAR2(10);
+--    V_OUT_MSG  VARCHAR2(2000);
+    V_SCHYY   COMM112.SCHYY %TYPE;
+    V_SHTM_FG COMM112.SHTM_FG %TYPE;
+
+BEGIN
+    /*재학생 현재 학년도, 학기*/
+    SELECT T1.SCHYY, 
+           T1.SHTM_FG
+      INTO V_SCHYY,
+           V_SHTM_FG
+      FROM COMM112 T1,
+           SSTM010 T2,
+           SSTM011 T3,
+           COMM210 T4
+     WHERE T1.DETA_BUSS_CD = T4.DETA_BUSS_CD
+       AND T2.SYSTEM_CD = T3.SYSTEM_CD
+       AND T2.SYSTEM_CD = T4.SYSTEM_CD
+       AND T3.SYSTEM_CD = T4.SYSTEM_CD
+       AND T3.UNIT_BUSS_CD = T4.UNIT_BUSS_CD
+       AND T3.UNIT_BUSS_ID = 'ENRO' /*단위업무id*/
+       AND T1.BDEGR_SYSTEM_FG = 'U000100001' /*학사시스템구분*/
+       AND T4.DETA_BUSS_CD = 'F0066' /*재학생등록*/ ;
+
+    V_SEND_CTNT            := '<html><body> <br> CHECK PRODEDURE : SNU.SP_ENRO_REG_CHECK <br><br>';
+    V_ENRO_TOT_ERROR_COUNT := 0;
+
+    /* 미납자인데 등록으로 되어 있는 학생들 
+    update enro200 set gv_st_fg = 'U060500001', auto_reg_fg = '', RECIV_DT = ''
+    where schyy = '2014'
+    and reg_tt_amt - scal_tt_amt > 0  -- 납입금 >0
+    and reciv_tt_amt = 0              -- 수납금 = 0
+    and GV_ST_FG = 'U060500002'       -- 등록
+    and nvl(SCHREG_MOD_FG,'x') not in ('U030300018','U030300017')  -- 복귀생 제외
+    */
+
+    V_ENRO_REG_ERROR_COUNT := 0;
+    V_REQ_STUNO            := '';
+    SELECT COUNT(*),
+           SUBSTR(XMLAGG(XMLELEMENT(COL, ',', STUNO) ORDER BY STUNO).EXTRACT('//text()').GETSTRINGVAL(),
+                  2) STUNO
+      INTO V_ENRO_REG_ERROR_COUNT,
+           V_REQ_STUNO
+      FROM ENRO200
+     WHERE SCHYY = V_SCHYY
+       AND SHTM_FG = V_SHTM_FG
+       AND REG_TT_AMT - SCAL_TT_AMT - BREU_REG_TT_AMT > 0 -- 납입금 >0
+       AND RECIV_TT_AMT = 0 -- 수납금 = 0
+       AND GV_ST_FG = 'U060500002' -- 등록
+       AND NVL(SCHREG_MOD_FG, 'x') NOT IN ('U030300018', 'U030300017'); -- 복귀생 제외 
+
+    /* 전체 에러 건수 */
+    V_ENRO_TOT_ERROR_COUNT := V_ENRO_TOT_ERROR_COUNT +
+                              V_ENRO_REG_ERROR_COUNT;
+    IF V_ENRO_REG_ERROR_COUNT > 0 THEN
+    
+        V_SEND_CTNT := V_SEND_CTNT || '미납자인데 등록으로 되어 있는 학생들이 [' ||
+                       V_ENRO_REG_ERROR_COUNT || ']건 존재 합니다. <br><br>';
+        V_SEND_CTNT := V_SEND_CTNT || '학번 : ' || V_REQ_STUNO || ' <br><br>';
+    END IF;
+
+    /* 장학생이 아닌데 장학생 자동등록 되어 있는 학생들
+    update enro200 set gv_st_fg = 'U060500001', auto_reg_fg = '', RECIV_DT = ''
+    where schyy = '2014'
+    and reg_tt_amt - scal_tt_amt > 0  -- 납입금 >0
+    and reciv_tt_amt = 0              -- 수납금 = 0
+    and GV_ST_FG = 'U060500002'       -- 등록
+    and nvl(SCHREG_MOD_FG,'x') not in ('U030300018','U030300017')  -- 복귀생 제외
+    */
+
+    V_ENRO_REG_ERROR_COUNT := 0;
+    V_REQ_STUNO            := '';
+
+    SELECT COUNT(*),
+           SUBSTR(XMLAGG(XMLELEMENT(COL, ',', STUNO) ORDER BY STUNO).EXTRACT('//text()').GETSTRINGVAL(),
+                  2) STUNO
+      INTO V_ENRO_REG_ERROR_COUNT,
+           V_REQ_STUNO
+      FROM ENRO200
+     WHERE SCHYY = V_SCHYY
+       AND SHTM_FG = V_SHTM_FG
+       AND SCAL_TT_AMT = '0'
+       AND GV_ST_FG = 'U060500002'
+       AND AUTO_REG_FG = 'U060600001'
+       AND RECIV_TT_AMT = 0;
+
+    -- 전체 에러 건수 
+    V_ENRO_TOT_ERROR_COUNT := V_ENRO_TOT_ERROR_COUNT +
+                              V_ENRO_REG_ERROR_COUNT;
+    IF V_ENRO_REG_ERROR_COUNT > 0 THEN
+        V_SEND_CTNT := V_SEND_CTNT || '장학생이 아닌데 장학생 자동등록 되어 있는 학생들이 [' ||
+                       V_ENRO_REG_ERROR_COUNT || ']건 존재 합니다. <br><br>';
+        V_SEND_CTNT := V_SEND_CTNT || '학번 : ' || V_REQ_STUNO || ' <br><br>';
+    END IF;
+
+    /* 분납자들과 납입금 상이자 
+      1. 장학변경자 마스터만 수정 --> 분납자는 장학수정 불가
+      2. 학점변경자/학과/과정변경/자유전공 처리 
+      select t1.stuno
+       ,t1.REG_TT_AMT - SCAL_TT_AMT  as ni_tt_amt
+       ,t2.part_tt_amt
+       ,t1.MOD_ID, t1.MOD_IP, t1.MOD_DTTM
+      from enro200  t1,
+           (select schyy, shtm_fg, deta_shtm_fg, stuno, 
+                   sum(part_entr_amt) as part_entr_amt, 
+                   sum(part_lsn_amt) as part_lsn_amt, 
+                   sum(part_tt_amt) as part_tt_amt
+             from enro230
+            where schyy = '2014'
+            group by schyy, shtm_fg, deta_shtm_fg, stuno
+            ) t2
+     where t1.schyy = t2.schyy
+       and t1.shtm_fg = t2.shtm_fg
+       and t1.deta_shtm_fg = t2.deta_shtm_fg
+       and t1.stuno = t2.stuno
+       and t1.part_yn = 'Y'
+       and t1.REG_TT_AMT - SCAL_TT_AMT <> part_tt_amt
+    */
+
+    V_ENRO_REG_ERROR_COUNT := 0;
+    V_REQ_STUNO            := '';
+
+    SELECT COUNT(*),
+           SUBSTR(XMLAGG(XMLELEMENT(COL, ',', T1.STUNO) ORDER BY T1.STUNO).EXTRACT('//text()').GETSTRINGVAL(),
+                  2) STUNO
+      INTO V_ENRO_REG_ERROR_COUNT,
+           V_REQ_STUNO
+      FROM ENRO200 T1,
+           (SELECT SCHYY,
+                   SHTM_FG,
+                   DETA_SHTM_FG,
+                   STUNO,
+                   SUM(PART_ENTR_AMT) AS PART_ENTR_AMT,
+                   SUM(PART_LSN_AMT) AS PART_LSN_AMT,
+                   SUM(PART_TT_AMT) AS PART_TT_AMT
+              FROM ENRO230
+             WHERE SCHYY = V_SCHYY
+               AND SHTM_FG = V_SHTM_FG
+             GROUP BY SCHYY,
+                      SHTM_FG,
+                      DETA_SHTM_FG,
+                      STUNO) T2
+     WHERE T1.SCHYY = T2.SCHYY
+       AND T1.SHTM_FG = T2.SHTM_FG
+       AND T1.DETA_SHTM_FG = T2.DETA_SHTM_FG
+       AND T1.STUNO = T2.STUNO
+       AND T1.PART_YN = 'Y'
+       AND T1.REG_TT_AMT - SCAL_TT_AMT <> PART_TT_AMT;
+
+    -- 전체 에러 건수 
+    V_ENRO_TOT_ERROR_COUNT := V_ENRO_TOT_ERROR_COUNT +
+                              V_ENRO_REG_ERROR_COUNT;
+    IF V_ENRO_REG_ERROR_COUNT > 0 THEN    
+        V_SEND_CTNT := V_SEND_CTNT || '분납금액과 납입금 상이자 [' ||
+                       V_ENRO_REG_ERROR_COUNT || ']건 존재 합니다. <br><br>';
+        V_SEND_CTNT := V_SEND_CTNT || '학번 : ' || V_REQ_STUNO || ' <br><br>';
+    END IF;
+
+    /* 등록생인데 미등록 되어 있는 학생들
+    */
+    V_ENRO_REG_ERROR_COUNT := 0;
+    V_REQ_STUNO            := '';
+    SELECT COUNT(*),
+           SUBSTR(XMLAGG(XMLELEMENT(COL, ',', STUNO) ORDER BY STUNO).EXTRACT('//text()').GETSTRINGVAL(),
+                  2) STUNO
+      INTO V_ENRO_REG_ERROR_COUNT,
+           V_REQ_STUNO
+      FROM (SELECT *
+              FROM ENRO200
+             WHERE SCHYY = V_SCHYY
+               AND SHTM_FG = V_SHTM_FG
+               AND REG_OBJ_FG = 'U060200001'
+               AND REG_TT_AMT - SCAL_TT_AMT <= 0
+               AND SCAL_TT_AMT != 0                  /* 장학금 0 아닌경우 포함 */
+               AND ((REGUL_SHTM_EXCE_YN = 'Y' AND TLSN_APLY_PNT <> 0) OR
+                   REGUL_SHTM_EXCE_YN = 'N')
+               AND GV_ST_FG = 'U060500001'            
+             UNION            
+            SELECT *
+              FROM ENRO200
+             WHERE SCHYY = V_SCHYY
+               AND SHTM_FG = V_SHTM_FG
+               AND REG_OBJ_FG = 'U060200001'
+               AND RECIV_TT_AMT > 0
+               AND GV_ST_FG = 'U060500001');
+
+    -- 전체 에러 건수 
+    V_ENRO_TOT_ERROR_COUNT := V_ENRO_TOT_ERROR_COUNT +
+                              V_ENRO_REG_ERROR_COUNT;
+    IF V_ENRO_REG_ERROR_COUNT > 0 THEN
+        V_SEND_CTNT := V_SEND_CTNT || '등록생인데 미등록 되어 있는 학생들 [' ||
+                       V_ENRO_REG_ERROR_COUNT || ']건 존재 합니다. <br><br>';
+        V_SEND_CTNT := V_SEND_CTNT || '학번 : ' || V_REQ_STUNO || ' <br><br>';
+    END IF;
+
+    /* 장학프로그램과 장학금이 다른 경우
+       SELECT T1.STUNO
+          ,T3.SELECT_FG
+          ,T1.ENTR_AMT    AS ENRO_ENTR_AMT
+          ,T1.LSN_AMT    AS ENRO_LSN_AMT
+          ,T1.REG_TT_AMT   AS ENRO_REG_TT_AMT
+    
+          ,T1.SCAL_ENTR_AMT AS ENRO_SCAL_ENTR_ANT
+          ,T1.SCAL_LSN_AMT AS ENRO_SCAL_LSN_ANT
+          ,T1.SCAL_TT_AMT  AS ENRO_SCAL_TT_AMT
+    
+          ,T2.SCAL_ENTR_AMT  AS SCHO_SCAL_ENTR_AMT              
+          ,T2.SCAL_LSN_AMT  AS SCHO_SCAL_LSN_AMT       
+          ,T2.SCAL_TT_AMT  AS SCHO_SCAL_LSN_AMT              
+          ,T1.RECIV_TT_AMT
+          
+     FROM ENRO200 T1,
+          (
+           SELECT SCHYY, SHTM_FG, STUNO
+                  ,SUM(ENTR_AMT) AS SCAL_ENTR_AMT
+                  ,SUM(LSN_AMT) AS SCAL_LSN_AMT
+                  ,SUM(SCAL_TT_AMT ) AS SCAL_TT_AMT
+             FROM SCHO500
+            WHERE 1=1 -- STUNO = '2006-10196'
+              AND SCAL_SLT_PROG_ST_FG = 'U073300004' --- 확정
+              AND SCHEXP_REDC_YN = 'Y'
+            GROUP BY SCHYY, SHTM_FG, STUNO
+          ) T2,
+          ENRO400 T3
+    WHERE T1.SCHYY = T2.SCHYY
+      AND T1.SHTM_FG = T2.SHTM_FG
+      AND T1.STUNO = T2.STUNO
+      AND T1.STUNO = T3.STUNO
+      AND T1.SCHYY = '2014'
+      AND T1.SHTM_FG = 'U000200001'
+      AND T1.SCAL_LSN_AMT <> T2.SCAL_LSN_AMT
+       */
+
+    V_ENRO_REG_ERROR_COUNT := 0;
+    V_ERROR_COUNT          := 0;
+    V_REQ_STUNO            := '';
+    SELECT COUNT(*)
+      INTO V_ENRO_REG_ERROR_COUNT
+      FROM (SELECT T1.STUNO,
+                   T1.ENTR_AMT      AS ENRO_ENTR_AMT, -- 등록 입학금
+                   T1.LSN_AMT       AS ENRO_LSN_AMT, -- 등록 수업료
+                   T1.REG_TT_AMT    AS ENRO_REG_TT_AMT, -- 등록 합계
+                   T1.SCAL_ENTR_AMT AS ENRO_SCAL_ENTR_ANT, -- (등록)장학 입학금
+                   T1.SCAL_LSN_AMT  AS ENRO_SCAL_LSN_ANT, -- (등록)장학 수업료
+                   T1.SCAL_TT_AMT   AS ENRO_SCAL_TT_AMT, -- (등록)장학 합계
+                   T2.SCAL_ENTR_AMT AS SCHO_SCAL_ENTR_AMT, -- (장학) 장학 입학금
+                   T2.SCAL_LSN_AMT  AS SCHO_SCAL_LSN_AMT, -- (장학) 장학 수업금    
+                   T2.SCAL_TT_AMT   AS SCHO_SCAL_TT_AMT, -- (장학) 장학 합계금         
+                   T1.RECIV_TT_AMT
+              FROM ENRO200 T1,
+                   (SELECT SCHYY,
+                           SHTM_FG,
+                           STUNO,
+                           SUM(ENTR_AMT) AS SCAL_ENTR_AMT,
+                           SUM(LSN_AMT) AS SCAL_LSN_AMT,
+                           SUM(SCAL_TT_AMT) AS SCAL_TT_AMT
+                      FROM SCHO500
+                     WHERE 1 = 1
+                       AND SCAL_SLT_PROG_ST_FG = 'U073300004' --- 확정
+                       AND SCHEXP_REDC_YN = 'Y'
+                     GROUP BY SCHYY,
+                              SHTM_FG,
+                              STUNO) T2
+             WHERE T1.SCHYY = T2.SCHYY(+)
+               AND T1.SHTM_FG = T2.SHTM_FG(+)
+               AND T1.STUNO = T2.STUNO(+)
+               AND T1.SCHYY = V_SCHYY
+               AND T1.SHTM_FG = V_SHTM_FG
+            --AND T1.SCAL_LSN_AMT <> T2.SCAL_LSN_AMT
+            )
+     WHERE ENRO_SCAL_LSN_ANT <> NVL(SCHO_SCAL_LSN_AMT, 0);
+     
+    FOR STU_LIST IN  (  SELECT STUNO
+                          INTO V_REQ_STUNO
+                          FROM (SELECT T1.STUNO,
+                                       T1.SCAL_LSN_AMT  AS ENRO_SCAL_LSN_ANT, -- (등록)장학 수업료
+                                       T2.SCAL_LSN_AMT  AS SCHO_SCAL_LSN_AMT  -- (장학)장학 수업금    
+                                  FROM ENRO200 T1,
+                                       (SELECT SCHYY,
+                                               SHTM_FG,
+                                               STUNO,
+                                               SUM(ENTR_AMT) AS SCAL_ENTR_AMT,
+                                               SUM(LSN_AMT) AS SCAL_LSN_AMT,
+                                               SUM(SCAL_TT_AMT) AS SCAL_TT_AMT
+                                          FROM SCHO500
+                                         WHERE 1 = 1
+                                           AND SCAL_SLT_PROG_ST_FG = 'U073300004' --- 확정
+                                           AND SCHEXP_REDC_YN = 'Y'
+                                         GROUP BY SCHYY,
+                                                  SHTM_FG,
+                                                  STUNO) T2
+                                 WHERE T1.SCHYY = T2.SCHYY(+)
+                                   AND T1.SHTM_FG = T2.SHTM_FG(+)
+                                   AND T1.STUNO = T2.STUNO(+)
+                                   AND T1.SCHYY = V_SCHYY
+                                   AND T1.SHTM_FG = V_SHTM_FG )
+                         WHERE ENRO_SCAL_LSN_ANT <> NVL(SCHO_SCAL_LSN_AMT, 0) ) LOOP
+                         
+        V_ERROR_COUNT := V_ERROR_COUNT + 1;
+        IF V_ERROR_COUNT < 10 THEN                         
+           V_REQ_STUNO := V_REQ_STUNO || STU_LIST.STUNO || ',' ;            
+        ELSE
+           V_REQ_STUNO := V_REQ_STUNO || '...' ;                        
+           EXIT;
+        END IF;
+        
+    END LOOP;                       
+     
+    -- 전체 에러 건수 
+    V_ENRO_TOT_ERROR_COUNT := V_ENRO_TOT_ERROR_COUNT +
+                              V_ENRO_REG_ERROR_COUNT;
+    IF V_ENRO_REG_ERROR_COUNT > 0 THEN
+        V_SEND_CTNT := V_SEND_CTNT || '장학데이터와 장학금이 다른 학생들  [' ||
+                       V_ENRO_REG_ERROR_COUNT || ']건 존재 합니다. <br><br>';                                              
+        V_SEND_CTNT := V_SEND_CTNT || '학번 : ' || V_REQ_STUNO || ' <br><br>';
+    END IF;
+
+    /*실시간 수납처리중 정상 전송되지 않은 경우*/
+    V_ENRO_REG_ERROR_COUNT := 0;
+    V_REQ_STUNO            := '';
+    SELECT COUNT(*),
+           SUBSTR(XMLAGG(XMLELEMENT(COL, ',', FNOSTUDENT) ORDER BY FNOSTUDENT).EXTRACT('//text()').GETSTRINGVAL(),
+                  2) STUNO
+      INTO V_ENRO_REG_ERROR_COUNT,
+           V_REQ_STUNO
+      FROM SILSUNAP.REG_ONLINE
+     WHERE FYEAR = V_SCHYY
+       AND FPERIOD = SUBSTR(V_SHTM_FG, 10)
+       AND FCDMOD IN ('MOD')
+          --           AND '20160201' BETWEEN FDTREGFM AND FDTREGTO
+          --           AND (FYNTRANS1 IS NULL
+          --               OR FYNTRANS2 IS NULL
+          --               OR FYNTRANS3 IS NULL);
+       AND ((FACT_NO1 IS NOT NULL AND FYNTRANS1 IS NULL) OR
+           (FACT_NO2 IS NOT NULL AND FYNTRANS2 IS NULL) OR
+           (FACT_NO3 IS NOT NULL AND FYNTRANS3 IS NULL));
+
+    -- 전체 에러 건수 
+    V_ENRO_TOT_ERROR_COUNT := V_ENRO_TOT_ERROR_COUNT +
+                              V_ENRO_REG_ERROR_COUNT;
+    IF V_ENRO_REG_ERROR_COUNT > 0 THEN
+    
+        V_SEND_CTNT := V_SEND_CTNT || '실시간 변경 전문 전송 중 정상 전송되지 않은 데이터가  [' ||
+                       V_ENRO_REG_ERROR_COUNT || ']건 존재 합니다. <br><br>';
+        V_SEND_CTNT := V_SEND_CTNT || '학번 : ' || V_REQ_STUNO || ' <br><br>';
+    END IF;
+    V_SEND_CTNT := V_SEND_CTNT || '</body></html> ';
+
+    /* 에러 건수 존재 한다면 EMAIL 발송, 07시에서 23시만 메일 발송  */
+    -- IF V_ENRO_TOT_ERROR_COUNT > 0 AND TO_CHAR(SYSDATE, 'HH24') BETWEEN '08' AND '22' THEN
+    /* 에러 건수 존재 한다면 EMAIL 발송, 월요일 14시 메일 발송  */
+    IF V_ENRO_TOT_ERROR_COUNT > 0 AND TO_CHAR(SYSDATE, 'HH24') = '14' AND TO_CHAR(SYSDATE, 'DAY') = 'MONDAY' THEN
+    
+        /* 발송대표번호*/
+        SELECT SEQ_SSTM070_RPSTNO.NEXTVAL INTO V_SEND_RPST_NO FROM DUAL;
+    
+        FOR PERS_DATA IN (SELECT USER_ID,
+                                 USER_NO,
+                                 USER_NM,
+                                 EMAIL
+                            FROM V_SNU_USER
+                           WHERE 1 = 1
+                                -- AND USER_NO in ('B111794','B111497','X000170','B111605','B002023','B111844') -- 안혜수, 김은하, 권순태, 성상호 , 정우성, 박가람
+                                -- AND USER_NO in ('B111497','B111605','B002023','B111520', 'B111751', 'X001381') -- SR1902-09649 2019-02-28 제외 : 박가람(B111844), 안혜수(B111794), 권순태(X000170) / 추가 : 김정희(B111520), 김설희(B111751), 박용주(X001381)
+                             AND USER_NO IN ('B111497',
+                                             'B111605',
+                                             'B002023',
+                                             'B111520',
+                                             'B111751',
+                                             'B111354',
+                                             'B111459',
+                                             'B111829',
+                                             'X001381') -- CH1906-00109 2019-08-22 추가  재무:김윤정, 학사:유진아 장학복지:이명철
+                          ) LOOP
+        
+            /* SMS 발송번호 */
+            SELECT SSTM070_SEQ.NEXTVAL INTO V_SEND_NO FROM DUAL;
+        
+            /* SMS/EMAIL발송 */
+            INSERT INTO SSTM070 /* SMS/EMAIL발송 */
+                (SEND_NO /* 발송번호 */,
+                 SYSTEM_CD /* 시스템코드 */,
+                 UNIT_BUSS_CD /* 단위업무코드 */,
+                 SM_UNIT_BUSS_CD /* 소단위업무코드 */,
+                 PGM_CD /* 프로그램코드*/,
+                 SEND_USER_NO /* 발송사용자번호 */,
+                 RECP_USER_NO /* 수신사용자번호 */,
+                 MSG_TYPE /* 메세지유형 */,
+                 SEND_TYPE /* 발송유형 */,
+                 SEND_PSN_HAND_TELNO /* 발송자휴대전화번호 */,
+                 SEND_PSN_EMAIL_ADDR /* 발송자이메일주소 */,
+                 RECPR_HAND_TELNO /* 수신자휴대전화번호 */,
+                 RECPR_EMAIL_ADDR /* 수신자이메일주소 */,
+                 SEND_TTL /* 발송제목 */,
+                 SEND_CTNT /* 발송내용*/,
+                 RESER_YN /* 예약여부 */,
+                 SEND_RESER_DTTM /* 발송예약일시 */,
+                 SEND_YN /* 발송여부 */,
+                 ATTC_FILE_NO /* 첨부파일번 */,
+                 SEND_LOG /* 발송이력 */,
+                 SEND_RSLT_CD /* 발송결과코드 */,
+                 SEND_RPST_NO /* 발송대표번 */,
+                 INPT_ID /* 입력자ID */,
+                 INPT_DTTM /* 입력일시 */,
+                 INPT_IP /* 입력자IP */,
+                 SEND_USER_DEPT_CD /* 발송사용자부서코드 */)
+            VALUES
+                (V_SEND_NO,
+                 'C' /*시스템코드 */,
+                 '00' /* 단위업무코드 */,
+                 '00' /* 소단위업무코드 */,
+                 'C000000' /* 프로그램코드 */,
+                 '' /* 발송사용자번호*/,
+                 'B111428' /* 수신사용자번호 */,
+                 'C021100002' /* 메세지유형 */,
+                 'C021200002' /* 발송유형 */,
+                 '' /* 발송자휴대전화번호 */,
+                 'snu_haksa@snu.ac.kr' /* 발송자이메일주소 */,
+                 '' /* 수신자휴대전화번호*/,
+                 PERS_DATA.EMAIL /* 수신자이메일주소 */,
+                 '등록 에러 체크 점검결과 에러[' || V_ENRO_TOT_ERROR_COUNT || '건]' /* 발송제목 */,
+                 V_SEND_CTNT /* 발송내용 */,
+                 'N' /* 예약여부 */,
+                 SYSDATE /* 발송예약일시 */,
+                 'N' /* 발송여부*/,
+                 NULL /* 첨부파일번 */,
+                 NULL /* 발송이력 */,
+                 NULL /* 발송결과코드 */,
+                 V_SEND_RPST_NO /* 발송대표번 */,
+                 'batch job' /* 입력자ID*/,
+                 SYSDATE /* 입력일시 */,
+                 NULL /* 입력자IP */,
+                 '0040' /* 발송사용자부서코드 */);
+        END LOOP;
+    
+    END IF;
+
+    COMMIT;
+
+END SP_ENRO_REG_CHECK;
+/

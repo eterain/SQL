@@ -1,0 +1,115 @@
+SELECT  LPAD(DECODE(C.USR_DEF_1,'20', NVL(A.POLITICS_LMT_BLW_DUC_OBJ_AMT,0)+ NVL(A.POLITICS_LMT_EXCE_DUC_OBJ_AMT,0)
+        , NVL(B.CNTRIB_GONGAMT,0)),13,'0') as a2  --15 해당년도 공제된금액 : 정치자금기부금은 10만원이하공제금액+10만원초과공제금액(산출세액 0원 대상자 문제)
+        , A.FLAW_CNTRIB_DUC_OBJ_AMT                                            
+FROM PAYM410 A /* 연말정산마스터 */
+    ,PAYM432 B /* 기부금 이월 */  
+    ,BSNS011 C /* 공통코드 */              
+WHERE A.YY           = '2019'
+    AND A.YRETXA_SEQ   = '1' /*@VER.2017_0 정산차수*/
+    AND A.BIZR_DEPT_CD = '00000'
+    
+    AND A.RPST_PERS_NO = 'A003032'
+    
+    --AND A.SETT_FG      = REC.SETT_FG      
+    AND A.YY           = B.YY
+    AND A.YRETXA_SEQ   = B.YRETXA_SEQ /*@VER.2017_0 정산차수*/
+    AND A.BIZR_DEPT_CD = B.BIZR_DEPT_CD
+    AND A.RPST_PERS_NO = B.RPST_PERS_NO
+    AND A.SETT_FG      = B.SETT_FG  
+    AND B.CNTRIB_TYPE_CD = C.CMMN_CD
+    AND C.GRP_CD       = 'A0324' /*기부금유형*/
+    
+    AND (  NVL(A.POLITICS_LMT_BLW_TAXDUC_AMT,0)  /*정치 10만원 이하 세액공제액*/
+            + NVL(A.POLITICS_LMT_EXCE_TAXDUC_AMT,0) /*정치 10만원 초과 세액공제액*/
+            + NVL(A.FLAW_CNTRIB_TAXDUC_AMT,0)       /*법정 세액공제액*/
+            + NVL(A.APNT_CNTRIB_TAXDUC_AMT,0)       /*지정 세액공제액*/
+            + NVL(A.OSC_CNTRIB_AMT,0)               /*우리사주조합 기부금*/
+            + NVL(A.CNTRIB_AMT_CYOV_AMT,0)          /*소득공제 기부금이월액(2013년이전)*/
+            ) > 0 
+;
+
+
+
+SELECT A.RPST_PERS_NO, A.KOR_NM, SUBSTR(A.RES_NO, 1, 6) || '-' || SUBSTR(A.RES_NO, 7, 1) || '******' AS resno, SUM(B.CNTRIB_OVERAMT)
+FROM PAYM410 A, PAYM432 B
+WHERE A.YY = B.YY
+AND A.YRETXA_SEQ = B.YRETXA_SEQ
+AND A.BIZR_DEPT_CD = B.BIZR_DEPT_CD
+AND A.SETT_FG = B.SETT_FG     
+AND NVL(A.DETM_TT_AMT,0) = 0
+AND A.SETT_FG = B.SETT_FG
+AND A.YY = '2019'
+AND A.SETT_FG = 'A031300001'
+AND A.YRETXA_SEQ   = 1
+GROUP BY A.RPST_PERS_NO, A.KOR_NM, A.RES_NO
+;
+
+SELECT *
+FROM PAYM423 A
+ WHERE A.YY           = '2019'
+   --AND A.YRETXA_SEQ   = 1
+   AND A.RPST_PERS_NO IN ( 'A080144', 'A080800' )
+   --AND A.SETT_FG = 'A031300001'
+   --AND A.CNTRIB_TYPE_CD = 'A032400001'
+--ORDER BY CNTRIB_TYPE_CD, CNTRIB_YY   
+;
+
+SELECT *
+FROM PAYM432 A --전년도 기부금 계산 결과 내역
+    ,PAYM452 B --사업자부서정보 @VER.2016_11
+WHERE A.RPST_PERS_NO IN ( 'A080144', 'A080800' )
+AND A.YY             = '2018' 
+AND A.YRETXA_SEQ     = 1
+AND A.YY             = B.YY                        /* @VER.2016_11 */
+AND A.BIZR_DEPT_CD   = B.BIZR_DEPT_CD  /* @VER.2016_11 */
+--AND B.BIZR_REG_NO    = IN_BIZR_REG_NO   /* @VER.2016_11 */
+AND A.CNTRIB_TYPE_CD = 'A032400006'    /* 기부금유형: 지정 종교외(40) */
+AND A.SETT_FG        = 'A031300001'    /* 정산구분: 연말정산 */
+AND NVL(A.CNTRIB_OVERAMT,0) <> 0       /* 전년도 결과 중 이월금액이 0 이 아닌 내역만 당년도 공제 내역에 갖고 옴 */
+;
+
+
+
+SELECT *
+FROM PAYM432 A
+WHERE A.RPST_PERS_NO IN ( 'A080144', 'A080800' )
+AND A.YY             = '2018' 
+AND A.YRETXA_SEQ     = 1
+AND A.CNTRIB_TYPE_CD = 'A032400006'    /* 기부금유형: 지정 종교외(40) */
+AND A.SETT_FG        = 'A031300001'    /* 정산구분: 연말정산 */
+AND NVL(A.CNTRIB_OVERAMT,0) <> 0       /* 전년도 결과 중 이월금액이 0 이 아닌 내역만 당년도 공제 내역에 갖고 옴 */
+;
+
+
+SELECT *
+FROM PAYM423 A
+WHERE A.RPST_PERS_NO IN ( 'A080144', 'A080800' )
+AND A.YY             = '2019' 
+;
+
+
+
+SELECT A.RPST_PERS_NO, A.YY, A.CNTRIB_TYPE_CD
+    ,(NVL(A.NTS_CNTRIB_AMT,0) + NVL(A.ETC_CNTRIB_AMT,0) - NVL(A.CNTRIB_ENC_APLY_AMT,0) ) AS CNTRIB_GIAMT/*@VER.2016_9 지정기부금 기부장려신청금액 차감.*/
+    ,0                                                 AS CNTRIB_PREAMT
+    ,0                                                 AS CNTRIB_GONGAMT
+    ,0                                                 AS CNTRIB_DESTAMT
+    ,0                                                 AS CNTRIB_OVERAMT
+    ,NVL(A.NTS_CNTRIB_AMT,0) + NVL(A.ETC_CNTRIB_AMT,0) AS APNT_CNTRIB_AMT  -- 당년도 종교단체 지정기부금 발생 금액
+    ,0                                                 AS APNT_CNTRIB_AMT2 -- 당년도 종교단체외  지정기부금 발생 금액
+    ,'C2' SORT1
+    ,A.YY SORT3
+FROM PAYM423 A --당년도 연말정산 기부내역
+    , PAYM421 B --연말정산 가족사항
+WHERE A.RPST_PERS_NO  IN ( 'A080144', 'A080800' )
+AND A.YY             = '2019'
+AND A.YRETXA_SEQ     = 1
+AND A.BIZR_DEPT_CD   = B.BIZR_DEPT_CD
+AND A.YY             = B.YY
+AND A.YRETXA_SEQ     = B.YRETXA_SEQ /*@VER.2017_0*/
+AND A.SETT_FG        = B.SETT_FG
+AND A.RPST_PERS_NO   = B.RPST_PERS_NO
+AND A.FM_SEQ         = B.FM_SEQ
+AND (B.INCOME_BELOW_YN = 'Y' OR B.FM_REL_CD = 'A034600001')--@VER.2016_4 기부금 부양가족 연령요건 삭제(소득요건만 체크 또는 본인)
+--AND NVL(B.BASE_DUC_YN,'N') IN ('Y','1') --기본공제 체크된 사람의 기부금
+;

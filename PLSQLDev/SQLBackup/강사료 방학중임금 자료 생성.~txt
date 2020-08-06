@@ -1,0 +1,290 @@
+    --1.강사료품의금액 생성
+      INSERT INTO PAYM632
+                ( MNGT_BREU_CD           /* 관리기관코드 */
+                , YYMM                   /* 년월 */
+                , PERS_NO                /* 개인번호 */
+                , YY                     /* 년도 */
+                , SHTM_CD                /* 학기코드 */
+                , UNIV_CD                /* 대학코드 */
+                , SUST_CD                /* 학과코드 */
+                , LT_SUBMATT_CD          /* 강의교과코드 */
+                , LT_CD                  /* 강좌코드 */
+                , LT_TM                  /* 강의시간 */
+                , CNTRB_AMT              /* 출연금액 */
+                , INT_FNRE_AMT           /* 자체재원금액 */
+                , BASI_AMT               /* 기준금액 */
+                , LECTURER_AMT           /* 강사료 */
+                , ADJ_AMT                /* 조정금액 */
+                , PAY_AMT                /* 지급금액 */
+                , ADJ_RESN               /* 조정사유 */
+                , INPT_ID                /* 입력ID */
+                , INPT_DTTM              /* 입력일시 */
+                , INPT_IP               /* 입력IP */
+                )
+           SELECT MNGT_BREU_CD
+                , YYMM
+                , PERS_NO
+                , YY
+                , SHTM_CD
+                , UNIV_CD
+                , SUST_CD
+                , LT_SUBMATT_CD
+                , LT_CD
+                , LT_TM
+                , NVL((SELECT CNTRB_AMT
+                         FROM PAYM610
+                        WHERE LECTURER_POSI_FG = A.LECTURER_POSI_FG), 0) AS CNTRB_AMT   /* 출연금액 */
+                , NVL((SELECT INT_FNRE_AMT
+                         FROM PAYM610
+                        WHERE LECTURER_POSI_FG = A.LECTURER_POSI_FG), 0) AS INT_FNRE_AMT/* 자체재원금액 */
+                , NVL((SELECT CNTRB_AMT + INT_FNRE_AMT
+                         FROM PAYM610
+                        WHERE LECTURER_POSI_FG = A.LECTURER_POSI_FG), 0) AS BASI_AMT    /* 기준금액(폐강) */
+                , CASE WHEN OPEN_LT_CLS_CLSS_FG = 'U040700007' AND OPEN_LT_ST_FG = 'U040600004' THEN   --강사 귀책사유폐강
+                                0
+                       WHEN OPEN_LT_ST_FG = 'U040600004' THEN --폐강
+                                CEIL(NVL(LT_TM,0) * 15 * NVL((SELECT CNTRB_AMT + INT_FNRE_AMT
+                                                                 FROM PAYM610
+                                                                WHERE LECTURER_POSI_FG = A.LECTURER_POSI_FG), 0) / 32 / 10) * 10 -- 원단위 올림
+                  END AS LECTURER_AMT    /* 강사료 */
+                , 0 AS ADJ_AMT
+                , CASE WHEN OPEN_LT_CLS_CLSS_FG = 'U040700007' AND OPEN_LT_ST_FG = 'U040600004' THEN   --강사 귀책사유폐강
+                                0
+                       WHEN OPEN_LT_ST_FG = 'U040600004' THEN --폐강
+                                CEIL(NVL(LT_TM,0) * 15 * NVL((SELECT CNTRB_AMT + INT_FNRE_AMT
+                                                                 FROM PAYM610
+                                                                WHERE LECTURER_POSI_FG = A.LECTURER_POSI_FG), 0) / 32 / 10) * 10 -- 원단위 올림
+                  END AS PAY_AMT         /* 지급금액 */
+                , '' AS ADJ_RESN
+                , 'admin'      /* 입력자ID */
+                , SYSDATE         /* 입력일시 */
+                , '0.0.0.0'      /* 입력자IP */
+             FROM (
+                   SELECT C.SALY_DEPT_CD AS MNGT_BREU_CD
+                        , '202001' AS YYMM
+                        , A.PERS_NO
+                        , '2019' AS YY
+                        , '2' AS SHTM_CD
+                        , UNIV_CD
+                        , SUST_CD
+                        , LT_SUBMATT_CD
+                        , LT_CD
+                        , A.LT_TM AS LT_TM
+                        , CASE WHEN A.LVLPT_FG = 'A021100213' AND A.OTH_BREU_PLR_FG = 'A024200007' THEN   --강사, 전업
+                                    'A031400017'       -- 전업강사
+                               WHEN A.LVLPT_FG = 'A021100213' AND A.OTH_BREU_PLR_FG = 'A024200008' THEN   --강사, 비전업
+                                    'A031400016'       -- 비전업강사
+                               WHEN A.LVLPT_FG = 'A021100067' THEN --명예교수
+                                    'A031400002'       -- 명예교수
+                               -- 연구원 정보 추가(연수연구원, 선임연구원, 객원연구원, 책임연구원) 20190911 SNOWKIM
+                               WHEN A.LVLPT_FG IN ('A021100071', 'A021100075', 'A021100078', 'A021100091', 'A021100119') AND A.OTH_BREU_PLR_FG = 'A024200007' THEN --연구원, 전업
+                                    'A031400013'       -- 연구원(전업)
+                               -- 연구원 정보 추가(연수연구원, 선임연구원, 객원연구원, 책임연구원) 20190911 SNOWKIM
+                               WHEN A.LVLPT_FG IN ('A021100071', 'A021100075', 'A021100078', 'A021100091', 'A021100119') AND A.OTH_BREU_PLR_FG = 'A024200008' THEN --연구원, 비전업
+                                    'A031400020'       -- 연구원(비전업)
+                               WHEN A.LVLPT_FG = 'A021100066' THEN --조교
+                                    'A031400014'       -- 조교
+                               WHEN A.LVLPT_FG = 'A021100050' OR A.LVLPT_FG = 'A021100049' OR A.LVLPT_FG = 'A021100048' THEN   --교사, 교감, 교장
+                                    'A031400015'       -- 부설학교교원
+                               ELSE
+                                    SF_PAYM610_LECTURER_POSI_FG(A.PERS_NO, '1')
+                           END AS LECTURER_POSI_FG
+                        , C203.OPEN_LT_CLS_CLSS_FG
+                        , C203.OPEN_LT_ST_FG
+                     FROM HURT257 A
+                        , HURT250 B
+                        , BSNS100 C
+                        , BSNS011 D
+                        , HURT190 E
+                        , COUR206 F
+                        , (SELECT OPEN_SCHYY
+                                , CASE WHEN OPEN_SHTM_FG = 'U000200001' AND OPEN_DETA_SHTM_FG = 'U000300001' THEN '1'
+                                       WHEN OPEN_SHTM_FG = 'U000200001' AND OPEN_DETA_SHTM_FG = 'U000300002' THEN 'S'
+                                       WHEN OPEN_SHTM_FG = 'U000200002' AND OPEN_DETA_SHTM_FG = 'U000300001' THEN '2'
+                                       WHEN OPEN_SHTM_FG = 'U000200002' AND OPEN_DETA_SHTM_FG = 'U000300002' THEN 'W'
+                                   END SHTM_CD
+                                , SBJT_CD
+                                , LT_NO
+                                , OPEN_LT_ST_FG -- 개설강좌상태구분
+                                , OPEN_LT_CLS_CLSS_FG  -- 개설강좌폐강구분
+                             FROM COUR203
+                            WHERE OPEN_LT_ST_FG = 'U040600004' -- 폐강인경우
+                               OR OPEN_LT_CLS_CLSS_FG = 'U040700007' -- 강사 귀책사유
+                          ) C203
+                    WHERE A.PERS_NO             = B.PERS_NO
+                      AND A.SUST_CD             = C.DEPT_CD
+                      AND A.YY                  = '2019'
+                      AND A.SHTM_CD             = '2'
+                      AND B.LVLPT_FG            = D.CMMN_CD
+                      AND NVL(D.USR_DEF_5, 'N') = 'N'
+                      AND C.SALY_DEPT_CD LIKE NVL('%','') || '%'
+                      AND C.SALY_DEPT_CD        <> '0522'      /* 언어교육원은 강사료인적구성에서 제외 */
+                      AND B.WKGD_CD             = E.WKGD_CD    /* @1.2 인적구성 제한 대상 비전임교원 제외 */
+                      AND E.WKGD_SM_CLSF_FG NOT IN ('A01CF00002', 'A01CF00004', 'A01CF00005', 'A01CF00006', -- 'A01CF00008' , -- 명예교수는 비전임에서 제외 snowkim 20190911
+                                                    'A01CF00009', 'A01CF00010', 'A01CF00011', 'A01CF00013', 'A01CF00017' ,
+                                                    'A01CF00019', 'A01CF00020')
+                      AND A.YY                  = F.OPEN_SCHYY
+                      AND A.SHTM_CD             = (CASE WHEN F.OPEN_SHTM_FG = 'U000200001' AND F.OPEN_DETA_SHTM_FG = 'U000300001' THEN '1'
+                                                        WHEN F.OPEN_SHTM_FG = 'U000200001' AND F.OPEN_DETA_SHTM_FG = 'U000300002' THEN 'S'
+                                                        WHEN F.OPEN_SHTM_FG = 'U000200002' AND F.OPEN_DETA_SHTM_FG = 'U000300001' THEN '2'
+                                                        WHEN F.OPEN_SHTM_FG = 'U000200002' AND F.OPEN_DETA_SHTM_FG = 'U000300002' THEN 'W'
+                                                    END )
+                      AND A.LT_SUBMATT_CD       = F.SBJT_CD
+                      AND A.LT_CD               = F.LT_NO
+                      AND A.YY           = C203.OPEN_SCHYY(+)
+                      AND A.SHTM_CD      = C203.SHTM_CD(+)
+                      AND A.LT_SUBMATT_CD= C203.SBJT_CD(+)
+                      AND A.LT_CD        = C203.LT_NO(+)
+                      AND C203.OPEN_LT_ST_FG = 'U040600004' -- 폐강강좌만
+                  ) A
+            WHERE PERS_NO IN ('D015551','D036049','D036104','D036114','D036168','D036179','D036182','D036350','D036878')
+            ;
+                  
+
+    --2.강사료 집계 삭제
+       DELETE
+         FROM PAYM630
+        WHERE YYMM            = '202001'
+          AND MNGT_BREU_CD LIKE NVL('%','') || '%'
+          AND PERS_NO IN ('D015551','D036049','D036104','D036114','D036168','D036179','D036182','D036350','D036878')
+          ;
+
+    --3.강사료 집계 생성
+          INSERT INTO PAYM630
+                    ( MNGT_BREU_CD , -- 관리기관코드
+                      YYMM , -- 년월
+                      PERS_NO , -- 개인번호
+                      LECTURER_POSI_FG , -- 강사직구분
+                      CNST_NO , -- 품의번호
+                      PAY_TM_CNT , -- 지급시간수
+                      CNTRB_AMT , -- 출연금액
+                      INT_FNRE_AMT , -- 자체재원금액
+                      ETC_AMT , -- 기타금액
+                      PAY_AMT , -- 지급금액
+                      PAY_CTNT , -- 지급내역
+                      EINS_JOIN_YN , -- 고용보험가입여부
+                      BANK_FG , -- 은행구분
+                      BACCT_NO , -- 계좌번호
+                      DEPOTR_NM , -- 예금주명
+                      POSI_BREU_CD , -- 소속기관코드
+                      POSI_DEPT_CD , -- 소속부서코드
+                      BIZTP_FG , -- 직종구분
+                      LVLPT_FG , -- 급류구분
+                      REMK , -- 비고
+                      INPT_ID , -- 입력자ID
+                      INPT_DTTM ,  -- 입력일시
+                      INPT_IP -- 입력자IP
+                    )
+              SELECT A.MNGT_BREU_CD , -- 관리기관코드
+                     A.YYMM , -- 년월
+                     A.PERS_NO , -- 개인번호
+                     D.LECTURER_POSI_FG ,
+                     NULL , -- 품의번호
+                     0, -- 지급시간수
+                     0, -- 출연금액
+                     0, -- 자체재원금액
+                     0, -- 기타금액
+                     SUM(PAY_AMT) , -- 지급금액
+                     NULL , -- 지급내역
+                     (SELECT EINS_JOIN_YN
+                        FROM PAYM630 P630
+                       WHERE P630.MNGT_BREU_CD = A.MNGT_BREU_CD
+                         AND P630.YYMM      = '201912'
+                         AND P630.PERS_NO   = A.PERS_NO) , -- 고용보험가입여부 -- @1.8 [SR2001-01801]고용보험 가입여부 체크사항 연계
+                     E.BANK_FG , -- 은행구분
+                     E.BACCT_NO , -- 계좌번호
+                     E.DEPOTR_NM , -- 예금주명
+                     B.POSI_BREU_CD , -- 소속기관코드
+                     B.POSI_DEPT_CD , -- 소속부서코드
+                     B.BIZTP_FG , -- 직종구분
+                     B.LVLPT_FG , -- 급류구분
+                     NULL , -- 비고
+                     'admin' , -- 입력자ID
+                     SYSDATE ,  -- 입력일시
+                     '0.0.0.0' -- 입력자IP
+                FROM PAYM632 A, HURT250 B,
+                     (
+                     SELECT PERS_NO
+                          , YY
+                          , SHTM_CD
+                          , CASE WHEN LVLPT_FG = 'A021100213' AND OTH_BREU_PLR_FG = 'A024200007' THEN   --강사, 전업
+                                        'A031400017'       -- 전업강사
+                                   WHEN LVLPT_FG = 'A021100213' AND OTH_BREU_PLR_FG = 'A024200008' THEN   --강사, 비전업
+                                        'A031400016'       -- 비전업강사
+                                   WHEN LVLPT_FG = 'A021100067' THEN --명예교수
+                                        'A031400002'       -- 명예교수
+                                   -- 연구원 정보 추가(연수연구원, 선임연구원, 객원연구원, 책임연구원) 20190911 SNOWKIM
+                                   WHEN LVLPT_FG IN ('A021100071', 'A021100075', 'A021100078', 'A021100091', 'A021100119') AND OTH_BREU_PLR_FG = 'A024200007' THEN --연구원, 전업
+                                        'A031400013'       -- 연구원(전업)
+                                   -- 연구원 정보 추가(연수연구원, 선임연구원, 객원연구원, 책임연구원) 20190911 SNOWKIM
+                                   WHEN LVLPT_FG IN ('A021100071', 'A021100075', 'A021100078', 'A021100091', 'A021100119') AND OTH_BREU_PLR_FG = 'A024200008' THEN --연구원, 비전업
+                                        'A031400020'       -- 연구원(비전업)
+                                   WHEN LVLPT_FG = 'A021100066' THEN --조교
+                                        'A031400014'       -- 조교
+                                   WHEN LVLPT_FG = 'A021100050' OR LVLPT_FG = 'A021100049' OR LVLPT_FG = 'A021100048' THEN   --교사, 교감, 교장
+                                        'A031400015'       -- 부설학교교원
+                                   ELSE
+                                        SF_PAYM610_LECTURER_POSI_FG(PERS_NO, '1')
+                               END AS LECTURER_POSI_FG
+                       FROM (
+                             SELECT PERS_NO
+                                   , YY
+                                   , SHTM_CD
+                                   , MAX(LVLPT_FG) AS LVLPT_FG
+                                   , MAX(OTH_BREU_PLR_FG) AS OTH_BREU_PLR_FG
+                                FROM HURT257
+                               WHERE YY = '2019'
+                               GROUP BY PERS_NO
+                                   , YY
+                                   , SHTM_CD
+                            )
+                     ) D
+                   , (                  
+                      SELECT P630_1.MNGT_BREU_CD
+                           , P630_1.YYMM
+                           , P630_1.PERS_NO
+                           , P630_1.BANK_FG     --은행구분
+                           , P630_1.BACCT_NO    --계좌번호
+                           , P630_1.DEPOTR_NM   --예금주명
+                        FROM PAYM630 P630_1
+                           , (SELECT P630_21.PERS_NO
+                                  , P630_21.YYMM
+                                  , MIN(P630_21.MNGT_BREU_CD) AS MNGT_BREU_CD
+                                FROM PAYM630 P630_21
+                                   , (SELECT P630_221.PERS_NO
+                                               , MAX(P630_221.YYMM) AS YYMM
+                                            FROM PAYM630 P630_221
+                                               , PAYM631 P631
+                                           WHERE P630_221.BANK_FG IS NOT NULL
+                                             AND P630_221.BACCT_NO IS NOT NULL
+                                             AND P630_221.DEPOTR_NM IS NOT NULL
+                                             AND P631.CNST_TRET_ST_FG = 'A033000003'  -- 개인별 가장 최근 지출결의된 내역에서 조회
+                                             AND P630_221.CNST_NO = P631.CNST_NO
+                                           GROUP BY P630_221.PERS_NO
+                                     ) P630_22
+                               WHERE P630_21.PERS_NO = P630_22.PERS_NO
+                                 AND P630_21.YYMM = P630_22.YYMM
+                               GROUP BY P630_21.PERS_NO
+                                      , P630_21.YYMM
+                               ) P630_2
+                       WHERE P630_1.PERS_NO = P630_2.PERS_NO
+                         AND P630_1.MNGT_BREU_CD = P630_2.MNGT_BREU_CD
+                         AND P630_1.YYMM = P630_2.YYMM
+                     ) E /* @1.4 계좌정보를 임용기간 동안 계속 연계하도록 수정 */
+               WHERE A.PERS_NO         = B.PERS_NO
+                 AND A.MNGT_BREU_CD    LIKE NVL('%','') || '%'
+                 AND A.YYMM            = '202001'
+                 AND A.PERS_NO         = D.PERS_NO
+                 AND A.YY              = D.YY
+                 AND A.SHTM_CD         = D.SHTM_CD
+                 AND A.MNGT_BREU_CD    = E.MNGT_BREU_CD(+)
+                 AND A.PERS_NO         = E.PERS_NO(+)
+                 AND B.LVLPT_FG NOT IN ('A021100067','A021100050') -- @1.6 급류구분(LVLPT_FG 컬럼)이 명예교수(A021100067), 교사(A021100050)는 대상에서 제외
+                 AND A.PERS_NO IN ('D015551','D036049','D036104','D036114','D036168','D036179','D036182','D036350','D036878')
+               GROUP BY A.MNGT_BREU_CD, A.YYMM, A.PERS_NO, B.POSI_BREU_CD, B.POSI_DEPT_CD, B.BIZTP_FG, B.LVLPT_FG, D.LECTURER_POSI_FG, E.BANK_FG, E.BACCT_NO, E.DEPOTR_NM
+               ;
+
+    --4.강사료품의등록(방학중임금) > 기본관리 탭의 강사료내역 확인 및 필요시 데이터 정정 : PAYM630, PAYM632
+        
+    
+    --5.강사료품의등록(방학중임금) > 기본관리 최총 확정금액을 품의금액으로 update : PAYM631

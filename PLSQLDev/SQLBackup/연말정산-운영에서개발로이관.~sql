@@ -1,0 +1,95 @@
+--인적공제
+delete from paym421 where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+insert into paym421
+select * from paym421@DBLINK_NUISDB1_SNU where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+--종전근무지
+delete from paym430 where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+insert into paym430
+select * from paym430@DBLINK_NUISDB1_SNU where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+--보험료
+delete from paym426 where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+insert into paym426
+select * from paym426@DBLINK_NUISDB1_SNU where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+--의료비
+delete from paym424 where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+insert into paym424
+select * from paym424@DBLINK_NUISDB1_SNU where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+delete from paym439 where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+insert into paym439
+select * from paym439@DBLINK_NUISDB1_SNU where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+--교육비
+delete from paym425 where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+insert into paym425
+select * from paym425@DBLINK_NUISDB1_SNU where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+--기부금
+delete from paym423 where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+insert into paym423
+select * from paym423@DBLINK_NUISDB1_SNU where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+delete from paym432 where yy = '2018' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+insert into paym432 --작년 기부금 이월
+select * from paym432@DBLINK_NUISDB1_SNU where yy = '2018' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+-- 주택자금
+delete from paym420 where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+insert into paym420
+select * from paym420@DBLINK_NUISDB1_SNU where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+delete from paym433 where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+insert into paym433
+select * from paym433@DBLINK_NUISDB1_SNU where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+delete from paym429 where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+insert into paym429
+select * from paym429@DBLINK_NUISDB1_SNU where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+--월세액
+delete from paym428 where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+insert into paym428
+select * from paym428@DBLINK_NUISDB1_SNU where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+--신용카드
+delete from paym422 where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+insert into paym422
+select * from paym422@DBLINK_NUISDB1_SNU where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+--연금및저축
+delete from paym427 where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+insert into paym427
+select * from paym427@DBLINK_NUISDB1_SNU where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+--그밖의공제
+delete from paym438 where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+insert into paym438
+select * from paym438@DBLINK_NUISDB1_SNU where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+
+-- 소득
+delete from paym440 where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+insert into paym440
+select * from paym440@DBLINK_NUISDB1_SNU where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+delete from paym441 where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+insert into paym441
+select * from paym441@DBLINK_NUISDB1_SNU where yy = '2019' AND SETT_FG = 'A031300001' AND RPST_PERS_NO = 'A075602';
+
+delete from PAYM571 where SUBSTR(PAY_DT, 1, 4) = '2019' AND RPST_PERS_NO = 'A075602';
+
+insert into PAYM571
+select * from PAYM571@DBLINK_NUISDB1_SNU where SUBSTR(PAY_DT, 1, 4) = '2019' AND RPST_PERS_NO = 'A075602';

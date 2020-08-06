@@ -1,0 +1,26 @@
+SELECT  
+                                             LPAD(DECODE(C.USR_DEF_1,'20', NVL(A.POLITICS_LMT_BLW_DUC_OBJ_AMT,0)+ NVL(A.POLITICS_LMT_EXCE_DUC_OBJ_AMT,0)
+                                                           ,NVL(B.CNTRIB_GONGAMT,0)),13,'0') as a2  --15 해당년도 공제된금액 : 정치자금기부금은 10만원이하공제금액+10만원초과공제금액(산출세액 0원 대상자 문제)
+                                            , a.FLAW_CNTRIB_DUC_OBJ_AMT                                            
+                                         FROM PAYM410 A /* 연말정산마스터 */
+                                             ,PAYM432 B /* 기부금 이월 */  
+                                             ,BSNS011 C /* 공통코드 */              
+                                        WHERE A.YY           = '2019'
+                                          AND A.YRETXA_SEQ   = '1' /*@VER.2017_0 정산차수*/
+                                          AND A.BIZR_DEPT_CD = '00000'
+                                          AND A.RPST_PERS_NO = 'A079331'
+                                          --AND A.SETT_FG      = REC.SETT_FG      
+                                          AND A.YY           = B.YY
+                                          AND A.YRETXA_SEQ   = B.YRETXA_SEQ /*@VER.2017_0 정산차수*/
+                                          AND A.BIZR_DEPT_CD = B.BIZR_DEPT_CD
+                                          AND A.RPST_PERS_NO = B.RPST_PERS_NO
+                                          AND A.SETT_FG      = B.SETT_FG  
+                                          AND B.CNTRIB_TYPE_CD = C.CMMN_CD
+                                          AND C.GRP_CD       = 'A0324' /*기부금유형*/
+                                          AND (  NVL(A.POLITICS_LMT_BLW_TAXDUC_AMT,0)  /*정치 10만원 이하 세액공제액*/
+                                               + NVL(A.POLITICS_LMT_EXCE_TAXDUC_AMT,0) /*정치 10만원 초과 세액공제액*/
+                                               + NVL(A.FLAW_CNTRIB_TAXDUC_AMT,0)       /*법정 세액공제액*/
+                                               + NVL(A.APNT_CNTRIB_TAXDUC_AMT,0)       /*지정 세액공제액*/
+                                               + NVL(A.OSC_CNTRIB_AMT,0)               /*우리사주조합 기부금*/
+                                               + NVL(A.CNTRIB_AMT_CYOV_AMT,0)          /*소득공제 기부금이월액(2013년이전)*/
+                                                ) > 0 ;

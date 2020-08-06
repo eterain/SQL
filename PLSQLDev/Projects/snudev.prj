@@ -1,0 +1,36 @@
+PL/SQL Developer Project
+
+[Options]
+AutoConnect=-1
+Username=snu
+Password=2697447545174319445741634477
+Database=SNUDEV02
+ConnectAs=Normal
+Edition=Dev
+Workspace=
+HaltAfterError=0
+BrowseHistory=0
+FileBrowser=0
+BeautfierRulesFile=
+ShowItems=0
+
+[History]
+Programs=C:\Users\kccsnu03\Documents\99-PLSQLDev
+SQL Scripts=C:\Users\kccsnu03\Documents\99-PLSQLDev
+Report Files=C:\Users\kccsnu03\Documents\99-PLSQLDev\Report
+Test Scripts=C:\Users\kccsnu03\Documents\99-PLSQLDev
+Command Scripts=C:\Users\kccsnu03\Documents\99-PLSQLDev
+Diagram Files=C:\Users\kccsnu03\Documents\99-PLSQLDev\Diagram
+
+[BrowserFolders]
+
+
+[Groups]
+
+[Files]
+
+[Notes]
+{\rtf1\ansi\deff0\nouicompat{\fonttbl{\f0\fnil Arial;}}
+{\*\generator Riched20 10.0.18362}\viewkind4\uc1 
+\pard\f0\fs20\lang1042\par
+}

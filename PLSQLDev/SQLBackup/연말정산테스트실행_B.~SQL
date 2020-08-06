@@ -1,0 +1,127 @@
+DECLARE
+    IN_BIZR_DEPT_CD   VARCHAR2(200);
+    IN_YY             VARCHAR2(200);
+    IN_YRETXA_SEQ     NUMBER;
+    IN_SETT_FG        VARCHAR2(200);
+    IN_RPST_PERS_NO   VARCHAR2(200);
+    IN_BIZR_REG_NO    VARCHAR2(200);
+    IO_BASIC_AMT      NUMBER;
+    IO_LABOR_TEMP_AMT NUMBER;
+    IO_EXPAND_AMT     NUMBER;
+    IO_DONATE_MAX_AMT NUMBER;
+
+    IO_TDUC_DUC_TT_AMT          NUMBER;
+    IO_CAL_TDUC_TEMP_AMT        NUMBER;
+    IO_SPCL_DUC_AMT             NUMBER;
+    IO_STAD_TAXDUC_OBJ_AMT      NUMBER;
+
+    IO_GONGJE_SUM_AMT NUMBER;
+    IO_GONGJE_TAX_AMT NUMBER;
+        
+    OUT_RTN           INTEGER;
+    OUT_MSG           VARCHAR2(200);
+    IN_INPT_ID        VARCHAR2(200);
+    IN_INPT_IP        VARCHAR2(200);
+
+BEGIN
+    IN_BIZR_DEPT_CD   := '00000';
+    IN_YY             := '2019';
+    IN_YRETXA_SEQ     := 1;
+    IN_SETT_FG        := 'A031300001';
+    IN_RPST_PERS_NO   := 'A004633';
+    IN_BIZR_REG_NO    := '1198208433';
+
+    IO_BASIC_AMT      := 104189285;
+    IO_LABOR_TEMP_AMT := 0;
+    IO_EXPAND_AMT     := 0;
+    IO_DONATE_MAX_AMT := 0;
+
+    IO_TDUC_DUC_TT_AMT     := 620000;
+    IO_CAL_TDUC_TEMP_AMT   := 13043211;
+    IO_SPCL_DUC_AMT        := 15457125;
+    IO_STAD_TAXDUC_OBJ_AMT := 16537638;
+
+    IO_GONGJE_SUM_AMT := 0;
+    IO_GONGJE_TAX_AMT := 0;
+        
+    IN_INPT_ID := 'id';
+    IN_INPT_IP := 'ip';
+
+    SNU.SP_PAYM410B_2019_DONATE_B( IN_BIZR_DEPT_CD, IN_YY, IN_YRETXA_SEQ, IN_SETT_FG, IN_RPST_PERS_NO, IN_BIZR_REG_NO,
+                                   IO_BASIC_AMT,
+                                   IO_EXPAND_AMT,
+                                   IO_DONATE_MAX_AMT,
+                                   IO_TDUC_DUC_TT_AMT,
+                                   IO_CAL_TDUC_TEMP_AMT,
+                                   IO_SPCL_DUC_AMT,
+                                   IO_STAD_TAXDUC_OBJ_AMT,
+                                   IO_GONGJE_SUM_AMT,
+                                   IO_GONGJE_TAX_AMT,
+                                   IO_LABOR_TEMP_AMT,
+                                   IN_INPT_ID, IN_INPT_IP, OUT_RTN, OUT_MSG);
+
+
+    DBMS_OUTPUT.PUT_LINE('우리사주로 넘겨주는 (기준소득금액:IO_EXPAND_AMT) : ' || IO_EXPAND_AMT );
+    DBMS_OUTPUT.PUT_LINE('우리사주로 넘겨주는 (공제대상금액-합계:IO_GONGJE_SUM_AMT) : ' || IO_GONGJE_SUM_AMT );
+
+END;
+
+
+/*
+                         SELECT C1.RPST_PERS_NO, C1.CNTRIB_YY, C1.CNTRIB_TYPE_CD
+                                , C1.CNTRIB_GIAMT
+                                , C1.CNTRIB_PREAMT
+                                , C1.CNTRIB_GONGAMT
+                                , C1.CNTRIB_DESTAMT
+                                , C1.CNTRIB_OVERAMT
+                                , SUM(C1.CNTRIB_GIAMT) OVER (PARTITION BY C1.CNTRIB_TYPE_CD) AS CNTRIB_TYPE_TT_AMT --기부유형별 합계금액
+                           FROM (SELECT A1.RPST_PERS_NO, A1.CNTRIB_YY, A1.CNTRIB_TYPE_CD,
+                                        SUM(A1.CNTRIB_GIAMT)   CNTRIB_GIAMT,
+                                        SUM(A1.CNTRIB_PREAMT)  CNTRIB_PREAMT,
+                                        SUM(A1.CNTRIB_GONGAMT) CNTRIB_GONGAMT,
+                                        SUM(A1.CNTRIB_DESTAMT) CNTRIB_DESTAMT,
+                                        SUM(A1.CNTRIB_OVERAMT) CNTRIB_OVERAMT,
+                                        A1.DUC_SORT
+                                   FROM (SELECT
+                                                A.RPST_PERS_NO, A.CNTRIB_YY, A.CNTRIB_TYPE_CD,
+                                                NVL(A.CNTRIB_GIAMT,0) CNTRIB_GIAMT,  --기부금액
+                                                NVL(A.CNTRIB_PREAMT,0) CNTRIB_PREAMT,   --전년까지 공제금액
+                                                NVL(A.CNTRIB_GONGAMT,0) CNTRIB_GONGAMT,  --당년 공제금액
+                                                NVL(A.CNTRIB_DESTAMT,0) CNTRIB_DESTAMT,  --당년 소멸금액
+                                                NVL(A.CNTRIB_OVERAMT,0) CNTRIB_OVERAMT,  --당년 이월금액
+                                                (A.CNTRIB_YY * -1) AS DUC_SORT --공제순서
+                                           FROM PAYM432 A, --전년도 기부금 계산 결과 내역
+                                                PAYM452 B  --사업자부서정보
+                                          WHERE A.RPST_PERS_NO = 'B111900'
+                                            AND A.YY           = '2019' - 1
+                                            AND A.YRETXA_SEQ   = '1'
+                                            AND A.YY           = B.YY
+                                            AND A.BIZR_DEPT_CD = B.BIZR_DEPT_CD
+                                            AND B.BIZR_REG_NO  = '1198208433'
+                                            AND A.CNTRIB_TYPE_CD = 'A032400001'  --법정기부금
+                                            AND A.SETT_FG = 'A031300001'--연말정산인것만
+                                            AND NVL(A.CNTRIB_OVERAMT,0) <> 0 --전년도 결과 중 이월금액이 0 이 아닌 내역만 당년도 공제 내역에 갖고 옴
+                                          UNION ALL
+                                         SELECT A.RPST_PERS_NO, A.YY, A.CNTRIB_TYPE_CD,
+                                                (NVL(A.NTS_CNTRIB_AMT,0) + NVL(A.ETC_CNTRIB_AMT,0) - NVL(A.CNTRIB_ENC_APLY_AMT, 0)),
+                                                0,0,0,0,
+                                                (A.YY * -1) AS DUC_SORT --공제순서
+                                           FROM PAYM423 A, PAYM421 B --당년도 등록 공제 내역
+                                          WHERE A.RPST_PERS_NO   = 'B111900'
+                                            AND A.YY             = '2019'
+                                            AND A.YRETXA_SEQ     = '1'
+                                            AND A.BIZR_DEPT_CD   = '00000'
+                                            AND A.CNTRIB_TYPE_CD = 'A032400001'  --법정기부금
+                                            AND A.SETT_FG        = 'A031300001'
+                                            AND A.BIZR_DEPT_CD   = B.BIZR_DEPT_CD
+                                            AND A.YY             = B.YY
+                                            AND A.YRETXA_SEQ     = B.YRETXA_SEQ
+                                            AND A.SETT_FG        = B.SETT_FG
+                                            AND A.RPST_PERS_NO   = B.RPST_PERS_NO
+                                            AND A.FM_SEQ         = B.FM_SEQ
+                                            AND (B.INCOME_BELOW_YN = 'Y' OR B.FM_REL_CD = 'A034600001')  -- 소득요건만 체크 또는 본인
+                                         ) A1
+                                   GROUP BY A1.RPST_PERS_NO, A1.CNTRIB_YY, A1.CNTRIB_TYPE_CD, A1.DUC_SORT
+                                 ) C1
+                              ORDER BY C1.DUC_SORT DESC ;
+*/

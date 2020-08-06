@@ -1,0 +1,283 @@
+DECLARE
+
+    IN_BIZR_DEPT_CD   VARCHAR2(200);
+    IN_YY             VARCHAR2(200);
+    IN_YRETXA_SEQ     NUMBER;
+    IN_SETT_FG        VARCHAR2(200);
+    IN_RPST_PERS_NO   VARCHAR2(200);
+    IN_BIZR_REG_NO    VARCHAR2(200);
+    IO_BASIC_AMT      NUMBER;
+    IO_EXPAND_AMT     NUMBER;
+    IO_DONATE_MAX_AMT NUMBER;
+
+    IO_TDUC_DUC_TT_AMT          NUMBER;
+    IO_CAL_TDUC_TEMP_AMT        NUMBER;
+    IO_SPCL_DUC_AMT             NUMBER;
+    IO_STAD_TAXDUC_OBJ_AMT      NUMBER;
+
+    IO_GONGJE_SUM_AMT NUMBER;
+    IO_GONGJE_TAX_AMT NUMBER;
+    IO_B_GONGJE_TAX_AMT NUMBER;
+    IO_W_GONGJE_TAX_AMT NUMBER;
+    
+    IO_LABOR_TEMP_AMT NUMBER;
+
+    OUT_RTN           INTEGER;
+    OUT_MSG           VARCHAR2(200);
+    IN_INPT_ID        VARCHAR2(200);
+    IN_INPT_IP        VARCHAR2(200);
+    V_STR1            VARCHAR2(1);
+    V_TMP1            NUMBER;
+    
+BEGIN
+    
+    IN_BIZR_DEPT_CD   := '00000';
+    IN_YY             := '2019';
+    IN_YRETXA_SEQ     := 1;
+    IN_SETT_FG        := 'A031300001';
+    IN_RPST_PERS_NO   := 'A003521';
+    IN_BIZR_REG_NO    := '1198208433';
+
+    IO_BASIC_AMT      := 80858112;
+    IO_EXPAND_AMT     := 80858112;
+    IO_DONATE_MAX_AMT := 0;
+
+    IO_TDUC_DUC_TT_AMT     := 0;
+    IO_CAL_TDUC_TEMP_AMT   := 0;
+    IO_SPCL_DUC_AMT        := 0;
+    IO_STAD_TAXDUC_OBJ_AMT := 0;
+
+    IO_GONGJE_SUM_AMT   := 0;
+    IO_B_GONGJE_TAX_AMT := 0;
+    IO_W_GONGJE_TAX_AMT := 0;
+    IO_LABOR_TEMP_AMT := 0;
+    
+    IN_INPT_ID := 'id';
+    IN_INPT_IP := 'ip';
+    
+    V_STR1 := 'N';
+    V_TMP1 := 0;
+
+    SNU.SP_PAYM410B_2019_DONATE_G( V_STR1, IN_BIZR_DEPT_CD, IN_YY, IN_YRETXA_SEQ, IN_SETT_FG, IN_RPST_PERS_NO, IN_BIZR_REG_NO,
+                                   IO_BASIC_AMT,
+                                   IO_EXPAND_AMT,
+                                   IO_DONATE_MAX_AMT,                                   
+                                   IO_TDUC_DUC_TT_AMT,
+                                   IO_CAL_TDUC_TEMP_AMT,
+                                   IO_SPCL_DUC_AMT,
+                                   IO_STAD_TAXDUC_OBJ_AMT,
+                                   
+                                   V_TMP1,
+                                   V_TMP1,
+                                   V_TMP1,
+                                   V_TMP1,
+                                   V_TMP1,
+                                   V_TMP1,
+                                   V_TMP1,
+                                   V_TMP1,
+                                   V_TMP1,
+                                   V_TMP1,
+                                   
+                                   IN_INPT_ID, IN_INPT_IP, OUT_RTN, OUT_MSG);
+
+    DBMS_OUTPUT.PUT_LINE('END' );
+
+END;
+
+
+/*
+SELECT C1.RPST_PERS_NO, C1.CNTRIB_YY, C1.CNTRIB_TYPE_CD
+            , C1.CNTRIB_GIAMT
+            , NVL(C1.CNTRIB_PREAMT,0)  AS CNTRIB_PREAMT
+            , NVL(C1.CNTRIB_GONGAMT,0) AS CNTRIB_GONGAMT
+            , NVL(C1.CNTRIB_DESTAMT,0) AS CNTRIB_DESTAMT
+            , NVL(C1.CNTRIB_OVERAMT,0) AS CNTRIB_OVERAMT
+            , SUM(C1.APNT_CNTRIB_AMT) OVER(PARTITION BY C1.RPST_PERS_NO) AS  APNT_CNTRIB_AMT -- 종교단체 지정기부금 발생(당년+이월) 금액
+            , SUM(C1.APNT_CNTRIB_AMT2) OVER(PARTITION BY C1.RPST_PERS_NO) AS  APNT_CNTRIB_AMT2 -- 종교단체외 지정기부금 발생(당년+이월) 금액
+            , SUM(C1.CNTRIB_GIAMT) OVER (PARTITION BY C1.CNTRIB_TYPE_CD) AS CNTRIB_TYPE_TT_AMT --기부유형별 합계금액
+            , C1.SORT1, C1.SORT3
+       FROM ( SELECT A1.RPST_PERS_NO, A1.CNTRIB_YY, A1.CNTRIB_TYPE_CD
+                     , SUM(A1.CNTRIB_GIAMT)   CNTRIB_GIAMT
+                     , SUM(A1.CNTRIB_PREAMT)  CNTRIB_PREAMT
+                     , SUM(A1.CNTRIB_GONGAMT) CNTRIB_GONGAMT
+                     , SUM(A1.CNTRIB_DESTAMT) CNTRIB_DESTAMT
+                     , SUM(A1.CNTRIB_OVERAMT) CNTRIB_OVERAMT
+                     , SUM(A1.APNT_CNTRIB_AMT) APNT_CNTRIB_AMT -- 종교단체 지정기부금 발생(당년+이월) 금액
+                     , SUM(A1.APNT_CNTRIB_AMT2) APNT_CNTRIB_AMT2 -- 종교단체외 지정기부금 발생(당년+이월) 금액
+                     , A1.SORT1, A1.SORT3
+                FROM (
+                         SELECT
+                                A.RPST_PERS_NO, A.CNTRIB_YY, A.CNTRIB_TYPE_CD
+                               ,NVL(A.CNTRIB_GIAMT,0)   AS CNTRIB_GIAMT
+                               ,NVL(A.CNTRIB_PREAMT,0)  AS CNTRIB_PREAMT
+                               ,NVL(A.CNTRIB_GONGAMT,0) AS CNTRIB_GONGAMT
+                               ,NVL(A.CNTRIB_DESTAMT,0) AS CNTRIB_DESTAMT
+                               ,NVL(A.CNTRIB_OVERAMT,0) AS CNTRIB_OVERAMT
+                               ,0                       AS APNT_CNTRIB_AMT  -- 이월된 종교단체 지정기부금 금액
+                               ,NVL(A.CNTRIB_OVERAMT,0) AS APNT_CNTRIB_AMT2 -- 이월된 종교단체외 지정기부금 금액
+                               ,'A1'                    AS SORT1
+                               ,A.CNTRIB_YY             AS SORT3
+                           FROM PAYM432 A --전년도 기부금 계산 결과 내역
+                               ,PAYM452 B --사업자부서정보 @VER.2016_11
+                          WHERE A.RPST_PERS_NO   = 'B111900'
+                            AND A.YY             = '2019' - 1
+                            AND A.YRETXA_SEQ     = '1'
+                            AND A.YY             = B.YY
+                            AND A.BIZR_DEPT_CD   = B.BIZR_DEPT_CD
+                            AND B.BIZR_REG_NO    = '1198208433'
+                            AND A.CNTRIB_TYPE_CD = 'A032400006'
+                            AND A.SETT_FG        = 'A031300001'
+                            AND NVL(A.CNTRIB_OVERAMT,0) <> 0
+                            AND A.CNTRIB_YY <= '2013'
+                         UNION ALL
+
+                         SELECT
+                                A.RPST_PERS_NO, A.CNTRIB_YY, A.CNTRIB_TYPE_CD
+                               ,NVL(A.CNTRIB_GIAMT,0)   AS CNTRIB_GIAMT
+                               ,NVL(A.CNTRIB_PREAMT,0)  AS CNTRIB_PREAMT
+                               ,NVL(A.CNTRIB_GONGAMT,0) AS CNTRIB_GONGAMT
+                               ,NVL(A.CNTRIB_DESTAMT,0) AS CNTRIB_DESTAMT
+                               ,NVL(A.CNTRIB_OVERAMT,0) AS CNTRIB_OVERAMT
+                               ,NVL(A.CNTRIB_OVERAMT,0) AS APNT_CNTRIB_AMT  -- 이월된 종교단체 지정기부금 금액
+                               ,0                       AS APNT_CNTRIB_AMT2 -- 이월된 종교단체외 지정기부금 금액
+                               ,'A2'                    AS SORT1
+                               ,A.CNTRIB_YY             AS SORT3
+                           FROM PAYM432 A --전년도 기부금 계산 결과 내역
+                               ,PAYM452 B --사업자부서정보 @VER.2016_11
+                          WHERE A.RPST_PERS_NO   = 'B111900'
+                            AND A.YY             = '2019' - 1
+                            AND A.YRETXA_SEQ     = '1'
+                            AND A.YY             = B.YY
+                            AND A.BIZR_DEPT_CD   = B.BIZR_DEPT_CD
+                            AND B.BIZR_REG_NO    = '1198208433'
+                            AND A.CNTRIB_TYPE_CD = 'A032400007'
+                            AND A.SETT_FG        = 'A031300001'
+                            AND NVL(A.CNTRIB_OVERAMT,0) <> 0
+                            AND A.CNTRIB_YY <= '2013'
+                         UNION ALL
+
+                         SELECT
+                                A.RPST_PERS_NO, A.CNTRIB_YY, A.CNTRIB_TYPE_CD
+                               ,NVL(A.CNTRIB_GIAMT,0)   AS CNTRIB_GIAMT
+                               ,NVL(A.CNTRIB_PREAMT,0)  AS CNTRIB_PREAMT
+                               ,NVL(A.CNTRIB_GONGAMT,0) AS CNTRIB_GONGAMT
+                               ,NVL(A.CNTRIB_DESTAMT,0) AS CNTRIB_DESTAMT
+                               ,NVL(A.CNTRIB_OVERAMT,0) AS CNTRIB_OVERAMT
+                               ,0                       AS APNT_CNTRIB_AMT  -- 이월된 종교단체 지정기부금 금액
+                               ,NVL(A.CNTRIB_OVERAMT,0) AS APNT_CNTRIB_AMT2 -- 이월된 종교단체외 지정기부금 금액
+                               ,'B1'        AS SORT1
+                               ,A.CNTRIB_YY AS SORT3
+                           FROM PAYM432 A --전년도 기부금 계산 결과 내역
+                               ,PAYM452 B --사업자부서정보 @VER.2016_11
+                          WHERE A.RPST_PERS_NO = 'B111900'
+                            AND A.YY           = '2019' - 1
+                            AND A.YRETXA_SEQ   = '1'
+                            AND A.YY           = B.YY
+                            AND A.BIZR_DEPT_CD = B.BIZR_DEPT_CD
+                            AND B.BIZR_REG_NO  = '1198208433'
+                            AND A.CNTRIB_TYPE_CD = 'A032400006'
+                            AND A.SETT_FG        = 'A031300001'
+                            AND NVL(A.CNTRIB_OVERAMT,0) <> 0
+                            AND A.CNTRIB_YY >= '2014'
+                         UNION ALL
+                         SELECT A.RPST_PERS_NO, A.YY, A.CNTRIB_TYPE_CD
+                               ,(NVL(A.NTS_CNTRIB_AMT,0) + NVL(A.ETC_CNTRIB_AMT,0) - NVL(A.CNTRIB_ENC_APLY_AMT,0) ) AS CNTRIB_GIAMT
+                               ,0                                                 AS CNTRIB_PREAMT
+                               ,0                                                 AS CNTRIB_GONGAMT
+                               ,0                                                 AS CNTRIB_DESTAMT
+                               ,0                                                 AS CNTRIB_OVERAMT
+                               ,0                                                 AS APNT_CNTRIB_AMT  -- 당년도 종교단체 지정기부금 발생 금액
+                               ,NVL(A.NTS_CNTRIB_AMT,0) + NVL(A.ETC_CNTRIB_AMT,0) AS APNT_CNTRIB_AMT2 -- 당년도 종교단체외 지정기부금 발생 금액
+                               ,'B2'  AS SORT1
+                               ,A.YY  AS SORT3
+                           FROM PAYM423 A --당년도 연말정산 기부내역
+                               ,PAYM421 B --연말정산 가족사항
+                          WHERE A.RPST_PERS_NO   = 'B111900'
+                            AND A.YY             = '2019'
+                            AND A.YRETXA_SEQ     = '1'
+                            AND A.BIZR_DEPT_CD   = '00000'
+                            AND A.CNTRIB_TYPE_CD = 'A032400006'
+                            AND A.SETT_FG        = 'A031300001'
+                            AND A.BIZR_DEPT_CD   = B.BIZR_DEPT_CD
+                            AND A.YY             = B.YY
+                            AND A.YRETXA_SEQ     = B.YRETXA_SEQ
+                            AND A.SETT_FG        = B.SETT_FG
+                            AND A.RPST_PERS_NO   = B.RPST_PERS_NO
+                            AND A.FM_SEQ         = B.FM_SEQ
+                            AND (B.INCOME_BELOW_YN = 'Y' OR B.FM_REL_CD = 'A034600001')--@VER.2016_4 기부금 부양가족 연령요건 삭제(소득요건만 체크 또는 본인)
+                         UNION ALL
+                         SELECT
+                                A.RPST_PERS_NO, A.CNTRIB_YY, A.CNTRIB_TYPE_CD
+                               ,NVL(A.CNTRIB_GIAMT,0)   AS CNTRIB_GIAMT
+                               ,NVL(A.CNTRIB_PREAMT,0)  AS CNTRIB_PREAMT
+                               ,NVL(A.CNTRIB_GONGAMT,0) AS CNTRIB_GONGAMT
+                               ,NVL(A.CNTRIB_DESTAMT,0) AS CNTRIB_DESTAMT
+                               ,NVL(A.CNTRIB_OVERAMT,0) AS CNTRIB_OVERAMT
+                               ,NVL(A.CNTRIB_OVERAMT,0) AS APNT_CNTRIB_AMT  -- 이월된 종교단체 지정기부금 금액
+                               ,0                       AS APNT_CNTRIB_AMT2 -- 이월된 종교단체외 지정기부금 금액
+                               ,'C1'                    AS SORT1
+                               ,A.CNTRIB_YY             AS SORT3
+                           FROM PAYM432 A --전년도 기부금 계산 결과 내역
+                               ,PAYM452 B --사업자부서정보 @VER.2016_11
+                          WHERE A.RPST_PERS_NO = 'B111900'
+                            AND A.YY           = '2019' - 1
+                            AND A.YRETXA_SEQ   = '1'
+                            AND A.YY           = B.YY
+                            AND A.BIZR_DEPT_CD = B.BIZR_DEPT_CD
+                            AND B.BIZR_REG_NO  = '1198208433'
+                            AND A.CNTRIB_TYPE_CD = 'A032400007'
+                            AND A.SETT_FG        = 'A031300001'
+                            AND NVL(A.CNTRIB_OVERAMT,0) <> 0
+                            AND A.CNTRIB_YY >= '2014'
+                         UNION ALL
+                         SELECT A.RPST_PERS_NO, A.YY, A.CNTRIB_TYPE_CD
+                               ,(NVL(A.NTS_CNTRIB_AMT,0) + NVL(A.ETC_CNTRIB_AMT,0) - NVL(A.CNTRIB_ENC_APLY_AMT,0) ) AS CNTRIB_GIAMT
+                               ,0                                                 AS CNTRIB_PREAMT
+                               ,0                                                 AS CNTRIB_GONGAMT
+                               ,0                                                 AS CNTRIB_DESTAMT
+                               ,0                                                 AS CNTRIB_OVERAMT
+                               ,NVL(A.NTS_CNTRIB_AMT,0) + NVL(A.ETC_CNTRIB_AMT,0) AS APNT_CNTRIB_AMT  -- 당년도 종교단체 지정기부금 발생 금액
+                               ,0                                                 AS APNT_CNTRIB_AMT2 -- 당년도 종교단체외  지정기부금 발생 금액
+                               ,'C2' SORT1
+                               ,A.YY SORT3
+                           FROM PAYM423 A --당년도 연말정산 기부내역
+                              , PAYM421 B --연말정산 가족사항
+                          WHERE A.RPST_PERS_NO   = 'B111900'
+                            AND A.YY             = '2019'
+                            AND A.YRETXA_SEQ     = '1'
+                            AND A.BIZR_DEPT_CD   = '00000'
+                            AND A.CNTRIB_TYPE_CD = 'A032400007'
+                            AND A.SETT_FG        = 'A031300001'
+                            AND A.BIZR_DEPT_CD   = B.BIZR_DEPT_CD
+                            AND A.YY             = B.YY
+                            AND A.YRETXA_SEQ     = B.YRETXA_SEQ
+                            AND A.SETT_FG        = B.SETT_FG
+                            AND A.RPST_PERS_NO   = B.RPST_PERS_NO
+                            AND A.FM_SEQ         = B.FM_SEQ
+                            AND (B.INCOME_BELOW_YN = 'Y' OR B.FM_REL_CD = 'A034600001')--@VER.2016_4 기부금 부양가족 연령요건 삭제(소득요건만 체크 또는 본인)
+                          --AND NVL(B.BASE_DUC_YN,'N') IN ('Y','1') --기본공제 체크된 사람의 기부금
+                         UNION ALL
+
+                         SELECT A.RPST_PERS_NO, A.YY, 'A032400006' AS CNTRIB_TYPE_CD
+                               ,NVL(A.EMP_LABUN_UN_CNTRIB_AMT,0) AS CNTRIB_GIAMT
+                               ,0                                AS CNTRIB_PREAMT
+                               ,0                                AS CNTRIB_GONGAMT
+                               ,0                                AS CNTRIB_DESTAMT
+                               ,0                                AS CNTRIB_OVERAMT
+                               ,0                                AS APNT_CNTRIB_AMT  --당년도 종교단체  지정기부금 발생 금액
+                               ,NVL(A.EMP_LABUN_UN_CNTRIB_AMT,0) AS APNT_CNTRIB_AMT2 --당년도 종교단체외  지정기부금 발생 금액
+                               ,'B2'                             AS SORT1
+                               ,A.YY                             AS SORT3
+                           FROM PAYM440 A --당년도 급여 노조비 공제 내역
+                          WHERE A.RPST_PERS_NO = 'B111900'
+                            AND A.YY           = '2019'
+                            AND A.YRETXA_SEQ   = '1'
+                            AND BIZR_DEPT_CD   = '00000'
+                            AND SETT_FG        = 'A031300001'
+                            AND NVL(A.EMP_LABUN_UN_CNTRIB_AMT,0) <> 0
+                 ) A1
+           GROUP BY A1.RPST_PERS_NO, A1.CNTRIB_YY, A1.CNTRIB_TYPE_CD, A1.SORT1, A1.SORT3
+           ) C1
+ORDER BY C1.SORT1,C1.SORT3
+
+*/

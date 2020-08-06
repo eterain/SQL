@@ -1,0 +1,128 @@
+--인적
+SELECT SF_BSNS011_CODENM(B.FM_REL_CD) AS FM_REL_NM,
+      CHILD_ORD_FG      자녀순서구분,
+      KOR_NM            ,
+      ENG_NM            ,
+      CHDADPT_DUC_YN    입양공제여부,
+      CHDBIRTH_DUC_YN   출산공제여부,
+      BASE_DUC_YN       기본공제여부,
+      BRED_DUC_YN       자녀양육공제여부,
+      WOMN_DUC_YN       부녀자공제여부,
+      HIND_DUC_YN       장애인여부,
+      HANDICAP_DUC_FG   장애인공제구분,
+      PATH_PREF_DUC_YN  경로우대공제여부,
+      FOREIGNER_YN      외국인여부,
+      HFE_DUC_YN        의료비공제여부,
+      INCOME_BELOW_YN   소득100만원이하여부,
+      SINGLE_PARENT_YN  한부모여부
+  FROM PAYM421_DAMO B
+ WHERE B.BIZR_DEPT_CD = '00000'
+   AND B.YY = '2019'
+   AND B.YRETXA_SEQ = '1'
+   AND B.SETT_FG = 'A031300001'
+   AND B.RPST_PERS_NO = 'A003032'
+   ;
+
+--의료비 - 실손의료비
+SELECT FM_REL_CD,
+       SF_BSNS011_CODENM(FM_REL_CD) AS FM_REL_NM,
+       MEDI_PROOF_CD,
+       SF_BSNS011_CODENM(MEDI_PROOF_CD) AS MEDI_PROOF_NM,
+       SUM(MEDI_SUM) AS SNM,
+       SUBFER_MEDIPRC_AMT_YN
+  FROM (
+        SELECT B.FM_REL_CD,
+               A.MEDI_PROOF_CD,
+--               SUM(A.NTS_CSH_RECPT) AS NTS_CSH_RECPT,
+--               SUM(A.ETC_CSH_RECPT) AS ETC_CSH_RECPT,
+               SUM(A.NTS_CSH_RECPT) +
+               SUM(A.ETC_CSH_RECPT) AS MEDI_SUM,
+               A.SUBFER_MEDIPRC_AMT_YN  /*난임시술비 여부*/
+          FROM PAYM424 A
+             , PAYM421 B
+         WHERE A.BIZR_DEPT_CD = '00000'
+           AND A.YY = '2019'
+           AND A.YRETXA_SEQ = '1'
+           AND A.SETT_FG = 'A031300001'
+           AND A.RPST_PERS_NO = 'A003032'
+           AND A.BIZR_DEPT_CD = B.BIZR_DEPT_CD
+           AND A.YY = B.YY
+           AND A.YRETXA_SEQ = B.YRETXA_SEQ
+           AND A.SETT_FG = B.SETT_FG
+           AND A.RPST_PERS_NO = B.RPST_PERS_NO
+           AND A.FM_SEQ = B.FM_SEQ
+         GROUP BY B.FM_REL_CD, A.MEDI_PROOF_CD, A.SUBFER_MEDIPRC_AMT_YN
+
+        UNION ALL
+
+        SELECT B.FM_REL_CD,
+               'A034300001' MEDI_PROOF_CD,
+               SUM(AMT) * -1 MINUS_AMT,
+               'N'
+          FROM PAYM439 A, PAYM421 B
+         WHERE A.BIZR_DEPT_CD = '00000'
+           AND A.YY = '2019'
+           AND A.YRETXA_SEQ = '1'
+           AND A.SETT_FG = 'A031300001'
+           AND A.RPST_PERS_NO = 'A003032'
+           AND A.BIZR_DEPT_CD = B.BIZR_DEPT_CD
+           AND A.YY = B.YY
+           AND A.YRETXA_SEQ = B.YRETXA_SEQ
+           AND A.SETT_FG = B.SETT_FG
+           AND A.RPST_PERS_NO = B.RPST_PERS_NO
+           AND A.FM_SEQ = B.FM_SEQ
+           AND A.MNGT_ITEM_CD = 'A037500001'                               --실손의료비
+         GROUP BY B.FM_REL_CD
+         )
+GROUP BY FM_REL_CD, MEDI_PROOF_CD, SUBFER_MEDIPRC_AMT_YN
+ORDER BY FM_REL_CD, MEDI_PROOF_CD
+   ;
+
+--신용카드
+SELECT CARD_CO_CD,
+       SF_BSNS011_CODENM(CARD_CO_CD) AS CARD_CO_NM,
+       SUM(CARD_SUM) AS CARD_SUM
+  FROM (
+        SELECT --B.FM_REL_CD,
+               --SF_BSNS011_CODENM(B.FM_REL_CD) AS FM_REL_NM,
+               DECODE(A.CARD_CO_CD, 'A032500008', 'A032500006', 'A032500009', 'A032500007', A.CARD_CO_CD) CARD_CO_CD,
+--               SF_BSNS011_CODENM(A.CARD_CO_CD) AS CARD_CO_NM,
+               SUM(A.NTS_CARD_USE_AMT) AS NTS_CARD_USE_AMT,
+               SUM(A.ETC_CARD_USE_AMT) AS ETC_CARD_USE_AMT,
+               SUM(A.NTS_CARD_USE_AMT) +
+               SUM(A.ETC_CARD_USE_AMT) AS CARD_SUM
+          FROM PAYM422 A
+             , PAYM421 B
+         WHERE A.BIZR_DEPT_CD = '00000'
+           AND A.YY = '2019'
+           AND A.YRETXA_SEQ = '2'
+           AND A.SETT_FG = 'A031300001'
+           AND A.RPST_PERS_NO = 'A003032'
+           AND A.BIZR_DEPT_CD = B.BIZR_DEPT_CD
+           AND A.YY = B.YY
+           AND A.YRETXA_SEQ = B.YRETXA_SEQ
+           AND A.SETT_FG = B.SETT_FG
+           AND A.RPST_PERS_NO = B.RPST_PERS_NO
+           AND A.FM_SEQ = B.FM_SEQ
+           AND ((B.FM_REL_CD NOT IN ('A034600007','A034600008','A034600009') AND NVL(B.INCOME_BELOW_YN,'N') = 'Y')
+                           OR B.FM_REL_CD = 'A034600001')
+         GROUP BY A.CARD_CO_CD
+         )
+GROUP BY CARD_CO_CD
+ORDER BY CARD_CO_CD
+   ;
+
+
+
+--기부금
+SELECT  SF_BSNS011_CODENM(a.cntrib_type_cd) as cntrib_type_nm
+, a.cntrib_yy 
+, CNTRIB_GIAMT - CNTRIB_PREAMT AS "2019이전"
+--a.*
+      FROM PAYM432 A
+     WHERE A.BIZR_DEPT_CD = '00000'
+       AND A.YY = '2019'
+       AND A.YRETXA_SEQ = '1'
+       AND A.SETT_FG = 'A031300001'
+       AND A.RPST_PERS_NO = 'A003032'
+   ;

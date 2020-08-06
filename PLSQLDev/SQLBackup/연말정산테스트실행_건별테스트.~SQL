@@ -1,0 +1,44 @@
+--ver : eterain3 : 2020.02.11.10:18
+
+DECLARE
+    IN_BIZR_DEPT_CD   VARCHAR2(200);
+    IN_YY             VARCHAR2(200);
+    IN_YRETXA_SEQ     NUMBER;
+    IN_SETT_FG        VARCHAR2(200);
+    IN_RPST_PERS_NO   VARCHAR2(200);
+    IN_INPT_ID        VARCHAR2(200);
+    IN_INPT_IP        VARCHAR2(200);
+    IN_DEPT_CD        VARCHAR2(200);
+    OUT_RTN           INTEGER;
+    OUT_MSG           VARCHAR2(200);
+BEGIN
+    IN_BIZR_DEPT_CD   := '00000';
+    IN_YY             := '2019';
+    IN_YRETXA_SEQ     := 2;
+    IN_SETT_FG        := 'A031300001';
+    
+    
+    IN_INPT_ID := 'id';
+    IN_INPT_IP := 'ip';
+           
+    IN_RPST_PERS_NO   := '96446-194';
+    
+    
+    SP_PAYM410B_TRET_2019 ( IN_BIZR_DEPT_CD,            
+                              IN_YY,
+                              IN_YRETXA_SEQ,
+                              IN_SETT_FG,
+                              IN_RPST_PERS_NO,
+                              IN_INPT_ID,
+                              IN_INPT_IP,
+                              IN_DEPT_CD,
+                              OUT_RTN,
+                              OUT_MSG
+                              );
+
+    COMMIT;                              
+                              
+    DBMS_OUTPUT.PUT_LINE('--');
+    DBMS_OUTPUT.PUT_LINE('----- eterain M : ' || OUT_RTN || ' : ' || OUT_MSG );
+                                 
+END;

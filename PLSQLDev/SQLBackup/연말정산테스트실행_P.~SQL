@@ -1,0 +1,76 @@
+DECLARE
+    IN_BIZR_DEPT_CD   VARCHAR2(200);
+    IN_YY             VARCHAR2(200);
+    IN_YRETXA_SEQ     NUMBER;
+    IN_SETT_FG        VARCHAR2(200);
+    IN_RPST_PERS_NO   VARCHAR2(200);
+
+    IO_BASIC_AMT      NUMBER;
+    IO_EXPAND_AMT     NUMBER;
+    IO_DONATE_MAX_AMT NUMBER;
+
+    IO_TDUC_DUC_TT_AMT          NUMBER;
+    IO_CAL_TDUC_TEMP_AMT        NUMBER;
+    IO_SPCL_DUC_AMT             NUMBER;
+    IO_STAD_TAXDUC_OBJ_AMT      NUMBER;
+
+    IO_GONGJE_SUM_AMT NUMBER;
+    OUT_RTN           INTEGER;
+    OUT_MSG           VARCHAR2(200);
+    IN_INPT_ID        VARCHAR2(200);
+    IN_INPT_IP        VARCHAR2(200);
+BEGIN
+    IN_BIZR_DEPT_CD   := '00000';
+    IN_YY             := '2019';
+    IN_YRETXA_SEQ     := 1;
+    IN_SETT_FG        := 'A031300001';
+    IN_RPST_PERS_NO   := 'A004633';
+
+    IO_BASIC_AMT      := 104189285;
+    IO_EXPAND_AMT     := 0;
+    IO_DONATE_MAX_AMT := 0;
+
+    IO_TDUC_DUC_TT_AMT     := 620000;
+    IO_CAL_TDUC_TEMP_AMT   := 13043211;
+    IO_SPCL_DUC_AMT        := 15457125;
+    IO_STAD_TAXDUC_OBJ_AMT := 16537638;
+
+    IO_GONGJE_SUM_AMT := 0;
+
+    IN_INPT_ID := 'id';
+    IN_INPT_IP := 'ip';
+
+    SNU.SP_PAYM410B_2019_DONATE_P( IN_BIZR_DEPT_CD, IN_YY, IN_YRETXA_SEQ, IN_SETT_FG, IN_RPST_PERS_NO,
+                                   IO_BASIC_AMT,
+                                   IO_EXPAND_AMT,
+                                   IO_DONATE_MAX_AMT,
+                                   IO_TDUC_DUC_TT_AMT,
+                                   IO_CAL_TDUC_TEMP_AMT,
+                                   IO_SPCL_DUC_AMT,
+                                   IO_STAD_TAXDUC_OBJ_AMT,
+                                   IO_GONGJE_SUM_AMT,
+                                   'id','ip', OUT_RTN, OUT_MSG);
+
+    DBMS_OUTPUT.PUT_LINE('법정기부금으로 넘겨주는 (공제대상금액-합계:IO_GONGJE_SUM_AMT) : ' || IO_GONGJE_SUM_AMT );
+
+END;
+
+
+/*
+        SELECT NVL(SUM(NVL(A.NTS_CNTRIB_AMT,0) + NVL(A.ETC_CNTRIB_AMT,0)),0)
+          FROM PAYM423 A, PAYM421 B
+         WHERE A.RPST_PERS_NO   = 'B111900'
+           AND A.YY             = '2019'
+           AND A.YRETXA_SEQ     = '1'
+           AND A.CNTRIB_TYPE_CD = 'A032400002'
+           AND A.BIZR_DEPT_CD   = '00000'
+           AND A.SETT_FG        = 'A031300001'
+           AND A.BIZR_DEPT_CD   = B.BIZR_DEPT_CD
+           AND A.YY             = B.YY
+           AND A.YRETXA_SEQ     = B.YRETXA_SEQ
+           AND A.SETT_FG        = B.SETT_FG
+           AND A.RPST_PERS_NO   = B.RPST_PERS_NO
+           AND A.FM_SEQ         = B.FM_SEQ
+           AND B.FM_REL_CD      = 'A034600001'
+           ;
+*/

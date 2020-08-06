@@ -1,0 +1,143 @@
+﻿DECLARE
+    IN_BIZR_DEPT_CD   VARCHAR2(200);
+    IN_YY             VARCHAR2(200);
+    IN_YRETXA_SEQ     NUMBER;
+    IN_SETT_FG        VARCHAR2(200);
+    IN_RPST_PERS_NO   VARCHAR2(200);
+    IN_BIZR_REG_NO    VARCHAR2(200);
+    IO_BASIC_AMT      NUMBER;
+    IO_EXPAND_AMT     NUMBER;
+    IO_DONATE_MAX_AMT NUMBER;
+
+    IO_TDUC_DUC_TT_AMT          NUMBER;
+    IO_CAL_TDUC_TEMP_AMT        NUMBER;
+    IO_SPCL_DUC_AMT             NUMBER;
+    IO_STAD_TAXDUC_OBJ_AMT      NUMBER;
+
+    IO_GONGJE_SUM_AMT NUMBER;
+    IO_GONGJE_TAX_AMT NUMBER;
+
+    OUT_RTN           INTEGER;
+    OUT_MSG           VARCHAR2(200);
+    IN_INPT_ID        VARCHAR2(200);
+    IN_INPT_IP        VARCHAR2(200);
+    IN_BIZR_DEPT_CD   := '00000';
+    IN_YY             := '2019';
+    IN_YRETXA_SEQ     := 1;
+    IN_SETT_FG        := 'A031300001';
+    IN_RPST_PERS_NO   := 'A076078';
+
+    IO_BASIC_AMT      := 80858112;
+    IO_EXPAND_AMT     := 80858112;
+    IO_DONATE_MAX_AMT := 0;
+
+    IO_TDUC_DUC_TT_AMT     := 0;
+    IO_CAL_TDUC_TEMP_AMT   := 0;
+    IO_SPCL_DUC_AMT        := 0;
+    IO_STAD_TAXDUC_OBJ_AMT := 0;
+
+    IO_GONGJE_SUM_AMT := 3000000;
+    IO_GONGJE_TAX_AMT := 0;
+
+    IN_INPT_ID := 'id';
+    IN_INPT_IP := 'ip';
+
+    SNU.SP_PAYM410B_2019_DONATE_W( IN_BIZR_DEPT_CD, IN_YY, IN_YRETXA_SEQ, IN_SETT_FG, IN_RPST_PERS_NO,
+                                   IO_BASIC_AMT,
+                                   IO_EXPAND_AMT,
+                                   IO_DONATE_MAX_AMT,
+                                   IO_TDUC_DUC_TT_AMT,
+                                   IO_CAL_TDUC_TEMP_AMT,
+                                   IO_SPCL_DUC_AMT,
+                                   IO_STAD_TAXDUC_OBJ_AMT,
+                                   IO_GONGJE_SUM_AMT,
+                                   IO_GONGJE_TAX_AMT,
+                                   IN_INPT_ID, IN_INPT_IP, OUT_RTN, OUT_MSG);
+
+    DBMS_OUTPUT.PUT_LINE('지정기부금으로 넘겨주는 (기준소득금액:IO_EXPAND_AMT) : ' || IO_EXPAND_AMT );
+    DBMS_OUTPUT.PUT_LINE('지정기부금으로 넘겨주는 (공제대상금액-합계:IO_GONGJE_SUM_AMT) : ' || IO_GONGJE_SUM_AMT );
+
+END;
+
+
+/*
+        SELECT NVL(SUM(NVL(A.NTS_CNTRIB_AMT,0) + NVL(A.ETC_CNTRIB_AMT,0)),0)
+          FROM PAYM423 A, PAYM421 B --당년도 등록 공제 내역
+         WHERE A.RPST_PERS_NO   = 'B111900'
+           AND A.YY             = '2019'
+           AND A.YRETXA_SEQ     = 1
+           AND A.CNTRIB_TYPE_CD = 'A032400008'
+           AND A.BIZR_DEPT_CD   = '00000'
+           AND A.SETT_FG        = 'A031300001'
+           AND A.BIZR_DEPT_CD   = B.BIZR_DEPT_CD
+           AND A.YY             = B.YY
+           AND A.YRETXA_SEQ     = B.YRETXA_SEQ
+           AND A.SETT_FG        = B.SETT_FG
+           AND A.RPST_PERS_NO   = B.RPST_PERS_NO
+           AND A.FM_SEQ         = B.FM_SEQ
+           AND B.FM_REL_CD      = 'A034600001'  -- 본인만
+           AND (B.INCOME_BELOW_YN = 'Y' OR B.FM_REL_CD = 'A034600001')          --소득요건만 체크 또는 본인
+        ;
+
+
+INSERT INTO PAYM423 ( BIZR_DEPT_CD,YRETXA_SEQ,YY,SETT_FG,RPST_PERS_NO,FM_SEQ,CNTRIB_SRNUM,CNTRIB_YYMM,CNTRIB_TYPE_CD,SBJT,CNTRIB_REMK,CNTRIB_FACT_BREU_NM,CNTRIB_FACT_BIZR_NO,NTS_CNTRIB_AMT,ETC_CNTRIB_AMT,CNTRIB_NO,CNTRIB_DT,CNTRIB_CNT,UPLOAD_FG,NTS_UPLOAD_YN,MNGR_INPT_YN,REMK,NTS_CNTRIB_TT_AMT,ETC_CNTRIB_TT_AMT,INPT_ID,INPT_DTTM,INPT_IP,MOD_ID,MOD_DTTM,MOD_IP,SALY_DEPT_CD,CNTRIB_ENC_APLY_AMT,DUC_OBJ_CNTRIB_AMT )
+SELECT A.BIZR_DEPT_CD,
+       A.YRETXA_SEQ,
+       A.YY,
+       A.SETT_FG,
+       A.RPST_PERS_NO,
+       A.FM_SEQ,
+       5 AS CNTRIB_SRNUM,
+       A.CNTRIB_YYMM,
+       'A032400008' AS CNTRIB_TYPE_CD,
+       A.SBJT,
+       A.CNTRIB_REMK,
+       A.CNTRIB_FACT_BREU_NM,
+       A.CNTRIB_FACT_BIZR_NO,
+       A.NTS_CNTRIB_AMT,
+       A.ETC_CNTRIB_AMT,
+       A.CNTRIB_NO,
+       A.CNTRIB_DT,
+       A.CNTRIB_CNT,
+       A.UPLOAD_FG,
+       A.NTS_UPLOAD_YN,
+       A.MNGR_INPT_YN,
+       A.REMK,
+       A.NTS_CNTRIB_TT_AMT,
+       A.ETC_CNTRIB_TT_AMT,
+       A.INPT_ID,
+       A.INPT_DTTM,
+       A.INPT_IP,
+       A.MOD_ID,
+       A.MOD_DTTM,
+       A.MOD_IP,
+       A.SALY_DEPT_CD,
+       A.CNTRIB_ENC_APLY_AMT,
+       A.DUC_OBJ_CNTRIB_AMT
+  FROM PAYM423 A, PAYM421 B
+ WHERE A.RPST_PERS_NO   = 'B111900'
+   AND A.YY             = '2019'
+   AND A.YRETXA_SEQ     = '1'
+   AND A.CNTRIB_TYPE_CD = 'A032400002'
+   AND A.BIZR_DEPT_CD   = '00000'
+   AND A.SETT_FG        = 'A031300001'
+   AND A.BIZR_DEPT_CD   = B.BIZR_DEPT_CD
+   AND A.YY             = B.YY
+   AND A.YRETXA_SEQ     = B.YRETXA_SEQ
+   AND A.SETT_FG        = B.SETT_FG
+   AND A.RPST_PERS_NO   = B.RPST_PERS_NO
+   AND A.FM_SEQ         = B.FM_SEQ
+   AND B.FM_REL_CD      = 'A034600001'
+   ;
+
+SELECT *
+ FROM PAYM423 A
+ WHERE A.RPST_PERS_NO   = 'B111900'
+   AND A.YY             = '2019'
+   AND A.YRETXA_SEQ     = '1'
+   AND A.BIZR_DEPT_CD   = '00000'
+   AND A.SETT_FG        = 'A031300001'
+   ;
+
+
+*/
