@@ -1,0 +1,6 @@
+# 프로젝트, BAKUP ignore.
+/*.bak
+
+
+# 필수 Data
+!README.md
