@@ -1,201 +1,219 @@
-SELECT * FROM bsns031 ;
+select * from comm121 where DETA_BUSS_CD in ( 'A0167','A0168')
+;
 
-  /*SSTM094.find01 화면에서 요청한 Action이 해당 사용자가 사용 가능한 Action인지 체크  */
-  SELECT *
-    FROM SSTM094
-   WHERE REGEXP_REPLACE(URL_NM, '[[:punct:]]') LIKE
-         '%' ||
-         REGEXP_REPLACE('/uni/ncrt/findStudInfo.action', '[[:punct:]]') || '%';
 
-SELECT * FROM enro200 
-WHERE schyy = '2020'
+select fr_dt || ' ~ ' || to_dt AS plan_date,
+       fr_dt || ' ' || FR_HOUR || ' ~ ' || to_dt || ' ' || TO_HOUR AS plan_date_det
+from comm121 
+where SCHAFF_SCHE_FG = 'U000500003'
+AND schyy = '2020'
 AND shtm_fg = 'U000200002'
+AND deta_shtm_fg = 'U000300001'
+AND bdegr_system_fg = 'U000100001'
+AND DETA_BUSS_CD = 'A0167'     -- 'A0168'
 ;
 
-SELECT * FROM BSNS031 WHERE rpst_pers_no = '2018-18738' ;
 
-SELECT DECODE(COUNT(*), 0, 'N', 'Y') AS YN
-FROM BSNS031 T1
-WHERE T1.PERS_NO = '2018-18738'     /* 학번 */
-AND (UPPER(TRIM(T1.PERS_KOR_NM)) = UPPER(TRIM('안현빈')) OR UPPER(TRIM(T1.PERS_ENG_NM)) LIKE '%' || UPPER(TRIM('안현빈')) || '%') /* 성명 */
-AND T1.BIRTH_DT = '19990515'  /* 생년월일 */
-;
+select * FROM cour018 ;
+select * FROM cour100 ;
 
-/* NCRT000.find05 등록고지서 정보 조회 */     SELECT         T4.NOTI_FG       , T5.DEPT_CD       , NVL('2011-11941','-') AS STUNO       , NVL('','-') AS STUIP       , NVL('','-') AS STUDT     FROM     (         SELECT DISTINCT             CASE WHEN T2.BDEGR_SYSTEM_FG = 'U000100001'                       THEN CASE WHEN T1.REG_OBJ_FG = 'U060200002' THEN '02'                                 ELSE '01'                            END                  WHEN T2.BDEGR_SYSTEM_FG = 'U000100002'                       THEN CASE WHEN T1.DEPT_CD = '981A' THEN '06'                                 ELSE '07'                            END                  WHEN T2.BDEGR_SYSTEM_FG = 'U000100003' THEN '08'             END AS NOTI_FG             /* 01 : 재학생등록, 02 : 계약학과등록, 06 : GMBA, 07 : SMBA, 08 : EMBA */         FROM             ENRO200     T1  /* 등록대상자내역 */           , V_COMM111_4 T2  /* 부서VIEW */           , (                 SELECT                     SCHYY       /* 학년 */                   , SHTM_FG     /* 학기 */                   , NOTI_FG     /* 안내페이지구분(공지구분) */                   , NOTI_NM     /* 안내페이지명칭(공지명칭) */                   , DEPT_CD     /* 부서코드 - 계약학과 고지서에서만 사용 */                 FROM                     V_NOTI_SCHE /* 안내페이지 VIEW */             ) T3         WHERE 1=1         AND T1.DEPT_CD = T2.DEPT_CD         AND T1.SCHYY   = T3.SCHYY         AND T1.SHTM_FG = T3.SHTM_FG         AND T1.STUNO   = '2011-11941'     ) T4,     (         SELECT             SCHYY       /* 학년 */           , SHTM_FG     /* 학기 */           , NOTI_FG     /* 안내페이지구분(공지구분) */           , NOTI_NM     /* 안내페이지명칭(공지명칭) */           , DEPT_CD     /* 부서코드 - 계약학과 고지서에서만 사용 */         FROM             V_NOTI_SCHE /* 안내페이지 VIEW */     ) T5     WHERE 1=1     AND T4.NOTI_FG = T5.NOTI_FG     ;
+cour623;
+cour624;
+cour625;
 
-SELECT USER_FG FROM SSTM094 GROUP BY USER_FG;
+hurt200;
+hurt250;
 
-SELECT USER_FG FROM SSTM094 
-WHERE REGEXP_REPLACE(URL_NM, '[[:punct:]]') LIKE '%' || REGEXP_REPLACE('/uni/ncrt/findNcrtSchaffScheList.action', '[[:punct:]]') || '%' ;
-SELECT USER_FG FROM SSTM094 
-WHERE REGEXP_REPLACE(URL_NM, '[[:punct:]]') LIKE '%' || REGEXP_REPLACE('/uni/gsin/cmmn/showError.action', '[[:punct:]]') || '%' ;
-SELECT * FROM SSTM094 
-WHERE REGEXP_REPLACE(URL_NM, '[[:punct:]]') LIKE '%' || REGEXP_REPLACE('/uni/uni/ncrt/findStudInfo.action', '[[:punct:]]') || '%' ;
+COUR203 ;
 
-DELETE FROM SSTM094 
-WHERE URL_NM LIKE '%' || 'ncrt' || '%' ;
+SF_COUR208_PERS_NM('01'
+                                          ,'02'
+                                          ,T1.OPEN_SCHYY
+                                          ,T1.OPEN_SHTM_FG
+                                          ,T1.OPEN_DETA_SHTM_FG
+                                          ,T1.SBJT_CD
+                                          ,T1.LT_NO
+                                          );
+SELECT t1.pers_no, 
+       SF_HURT200_PERS_INFO('1',T1.PERS_NO),
+       T3.WKGD_NM, 
+       (SELECT DEPT_KOR_NM FROM BSNS100 WHERE T2.POSI_BREU_CD = DEPT_CD) AS POSI_BREU_NM,
+       '41' AS SBJT_FLD_CD,
+       (SELECT SBJT_FLD_NM FROM COUR018 WHERE SBJT_FLD_CD = '41' ) AS SBJT_FLD_NM
+FROM  COUR208 T1
+     ,HURT250 T2
+     ,HURT190 T3
+WHERE T1.OPEN_SCHYY                 = '2020'
+AND T1.OPEN_SHTM_FG               = 'U000200001'
+AND T1.OPEN_DETA_SHTM_FG          = 'U000300001'
+AND T1.SBJT_CD                    = '031.001'
+AND T1.LT_NO                      = '001'
+AND T1.PERS_NO                    = T2.PERS_NO
+AND T2.WKGD_CD                    = T3.WKGD_CD
+AND T1.SBJT_MA_RESP_YN = 'Y'
+; 
+                      
+        SELECT T1.PERS_NO,
+               SF_HURT200_PERS_INFO('1',T1.PERS_NO) AS RESP_PROF_KOR_NM,
+               T3.WKGD_NM AS RESP_PROF_WKPO_NM,
+               (SELECT DEPT_KOR_NM FROM BSNS100 WHERE T2.POSI_BREU_CD = DEPT_CD) AS RESP_PROF_POSI_NM,
+               '41' AS SBJT_FLD_CD,
+               (SELECT SBJT_FLD_NM FROM COUR018 WHERE SBJT_FLD_CD = '41' ) AS SBJT_FLD_NM
+        FROM  COUR208 T1
+             ,HURT250 T2
+             ,HURT190 T3
+        WHERE T1.PERS_NO                  = T2.PERS_NO
+          AND T2.WKGD_CD                  = T3.WKGD_CD
+          AND T1.SBJT_MA_RESP_YN = 'Y' ;                                                                
+SELECT t1.pers_no, SF_HURT200_PERS_INFO('1',T1.PERS_NO)
+                     FROM  COUR208 t1
+                      AND T1.SBJT_MA_RESP_YN = 'Y';                                          
+                                          
 
+SELECT * FROM COUR208 WHERE open_schyy = '2020';
 
-DELETE FROM SSTM094 
-WHERE REGEXP_REPLACE(URL_NM, '[[:punct:]]') LIKE '%' || REGEXP_REPLACE('/uni/ncrt/findNcrtSchaffScheList.action', '[[:punct:]]') || '%' ;
-DELETE FROM SSTM094 
-WHERE REGEXP_REPLACE(URL_NM, '[[:punct:]]') LIKE '%' || REGEXP_REPLACE('/uni/gsin/cmmn/showError.action', '[[:punct:]]') || '%' ;
-DELETE FROM SSTM094 
-WHERE REGEXP_REPLACE(URL_NM, '[[:punct:]]') LIKE '%' || REGEXP_REPLACE('/uni/uni/ncrt/findStudInfo.action', '[[:punct:]]') || '%' ;
+/* COUR623.update03 강의조교협약 및 활동관리 수정 */
+UPDATE COUR625
+   SET MOD_ID            = 'B111606' /* 수정자ID */,
+       MOD_IP            = NULL /* 수정자IP */,
+       MOD_DTTM          = SYSDATE /* 수정일시 */,
+       STD_ACCP_YN       = '-',
+       RESP_PROF_ACCP_YN = '-',
+       CHIEF_ACCP_YN     = 'Y'
+ WHERE OPEN_SCHYY = '2020' /* 개설학년도(PK1) 
+      */
+   AND OPEN_SHTM_FG = 'U000200001' /* 개설학기구분(PK2) */
+   AND OPEN_DETA_SHTM_FG = 'U000300001' /* 
+      개설세부학기구분(PK3) */
+   AND MNGT_DEPT_CD = '601' /* 관리부서코드(PK4) */
+   AND STUNO = '93601-009' /* 학번(PK5) 
+      */
+   AND LT_ASSIST_INPT_SEQ = 1;
 
+SELECT * FROM COUR624 ;
 
-INSERT INTO sstm094 ( url_nm, 
-user_fg, 
-inpt_id, 
-inpt_dttm, 
-inpt_ip, 
-mod_id, 
-mod_dttm, 
-mod_ip )
-SELECT '/uni/uni/ncrt/findStudInfo.action', 
-user_fg, 
-inpt_id, 
-inpt_dttm, 
-inpt_ip, 
-mod_id, 
-mod_dttm, 
-mod_ip FROM sstm094 
-WHERE REGEXP_REPLACE(URL_NM, '[[:punct:]]') LIKE '%' || REGEXP_REPLACE('adm/park/pkam/aplyParkTickNewAply.action', '[[:punct:]]') || '%' ;
+        SELECT T1.OPEN_SCHYY                                                              /* 개설학년도(PK1) */
+              ,T1.OPEN_SHTM_FG
+              ,T1.OPEN_DETA_SHTM_FG
+              ,SF_BSNS011_CODENM(T1.OPEN_SHTM_FG,1) AS OPEN_SHTM_FG_KOR_NM                /* 개설학기구분(PK2) */
+              ,SF_BSNS011_CODENM(T1.OPEN_DETA_SHTM_FG,1) AS OPEN_DETA_SHTM_FG_KOR_NM      /* 개설세부학기구분(PK3) */
+              ,T1.MNGT_DEPT_CD                                                            /* 관리부서코드(PK4) */
+              ,T2.DEPT_KOR_NM AS MNGT_DEPT_KOR_NM                                         /* 관리부서명 */
+              ,T1.STUNO                                                                   /* 학번(PK5) */
+              ,T1.LT_ASSIST_INPT_SEQ                                                      /* 강의조교입력순번(PK6) */
+              ,(SELECT TA.KOR_NM FROM HURT200 TA
+                 WHERE TA.RPST_PERS_NO = T3.RPST_PERS_NO) AS KOR_NM                       /* 성명 */
+              ,T3.UNIVS_KOR_NM                                                            /* 대학(원) */
+              ,T3.DEPARTMENT_KOR_NM                                                       /* 학과(부) */
+              ,(SELECT SF_BSNS011_CODENM(T3.PROG_CORS_FG) FROM DUAL ) AS PROG_CORS_FG_NM  /* 진행과정 */
+              ,(SELECT SF_BSNS011_CODENM(T3.SCHREG_FG) FROM DUAL ) AS SCHREG_FG_NM        /* 학적상태 */
+              ,DECODE(T3.STD_FG, 'U030500002', '연구생') AS RECHER_YN                     /* 연구생여부 */
+              ,T1.LT_ASSIST_TYPE_FG
+              ,T1.LT_ASSIST_ST_FG
+              ,SF_BSNS011_CODENM(T1.LT_ASSIST_TYPE_FG,1) AS LT_ASSIST_TYPE_FG_KOR_NM      /* 강의조교유형구분 */
+              ,SF_BSNS011_CODENM(T1.LT_ASSIST_ST_FG,1) AS LT_ASSIST_ST_FG_KOR_NM          /* 강의조교상태구분 */
+              ,T1.REAL_ACT_FR_DT                                                               /* 활동시작일자 */
+              ,T1.REAL_ACT_TO_DT                                                               /* 활동종료일자 */
+              ,T1.LT_ASSIST_LBCOST_DCNT                                                   /* 강의조교인건비일수 */
+              ,T1.RESP_PROF_PERS_NO                                                       /* 담당교수개인번호 */
+              ,(SELECT TA.KOR_NM FROM HURT200 TA
+                 WHERE TA.RPST_PERS_NO = T1.RESP_PROF_PERS_NO) AS RESP_PROF_KOR_NM        /* 담당교수성명 */
+              ,T1.RESP_PROF_WKPO_NM                                                       /* 담당교수직위 */
+              ,T1.RESP_PROF_POSI_NM                                                   /* 담당교수소속 */
+              ,T1.CHIEF_PERS_NO                                                           /* 기관장개인번호 */
+              ,(SELECT TA.KOR_NM FROM HURT200 TA
+                 WHERE TA.RPST_PERS_NO = T1.CHIEF_PERS_NO) AS CHIEF_KOR_NM                /* 기관장성명 */
+              ,T1.CHIEF_WKPO_NM                                                           /* 기관장직위 */
+              ,T1.CHIEF_POSI_NM                                                           /* 기관장소속 */
+              ,T4.SBJT_FLD_CD                                                             /* 교양영역 */
+              ,(SELECT SBJT_FLD_NM FROM COUR018
+                 WHERE SBJT_FLD_CD = T4.SBJT_FLD_CD) AS SBJT_FLD_NM                       /* 교양영역명 */
+              ,T4.SBJT_NM                                                                 /* 교과목명 */
+              ,T1.SBJT_NO                                                                 /* 교과목번호 */
+              ,T1.LT_NO                                                                   /* 강좌번호 */
+              ,T1.REMK                                                                    /* 비고 */
+              ,T1.INPT_ID                                                                 /* 입력ID */
+              ,T1.INPT_IP                                                                 /* 입력IP */
+              ,TO_CHAR(T1.INPT_DTTM, 'YYYYMMDD HH24:MI:SS') AS INPT_DTTM                  /* 입력일시 */
+              ,T1.MOD_ID                                                                  /* 수정ID */
+              ,T1.MOD_IP                                                                  /* 수정IP */
+              ,TO_CHAR(T1.MOD_DTTM, 'YYYYMMDD HH24:MI:SS') AS MOD_DTTM                    /* 수정일시 */
+              ,T5.ACT_PLAN_ACCP_ST
+              ,T5.ACT_RPRT_ACCP_ST
+              ,NVL(SF_BSNS011_CODENM(T5.ACT_PLAN_ACCP_ST,1),'-') AS ACT_PLAN_ACCP_ST_KOR_NM
+              ,NVL(SF_BSNS011_CODENM(T5.ACT_RPRT_ACCP_ST,1),'-') AS ACT_RPRT_ACCP_ST_KOR_NM
+              ,T5.LT_ASSIST_ACT_CTNT
+              ,T5.WRITE_HWORK_KND_CTNT
+              ,T5.ETC_HWORK_KND_CTNT
+              ,T5.WRITE_HWORK_COACH_CTNT
+              ,T5.ETC_HWORK_COACH_CTNT
+              ,T5.PRAC_COACH_CTNT
+              ,T5.LT_TM_ACT_CTNT
+              ,T5.LT_SUPP_CTNT
+              ,T5.ETC_CTNT
+              ,T5.RESP_BUSS_CTNT
+              ,NVL(T6.STD_ACCP_YN,'-') AS STD_ACCP_YN
+              ,T6.STD_ACCP_DTTM
+              ,NVL(T6.RESP_PROF_ACCP_YN,'-') AS RESP_PROF_ACCP_YN
+              ,T6.RESP_PROF_PERS_NO
+              ,T6.RESP_PROF_POSI_NM
+              ,T6.RESP_PROF_WKPO_NM
+              ,T6.RESP_PROF_ACCP_DTTM
+              ,NVL(T6.CHIEF_ACCP_YN,'-') AS CHIEF_ACCP_YN
+              ,T6.CHIEF_PERS_NO
+              ,T6.CHIEF_POSI_NM
+              ,T6.CHIEF_WKPO_NM
+              ,T6.CHIEF_ACCP_DTTM
 
+              ,(select fr_dt || ' ~ ' || to_dt
+                       /*  fr_dt || ' ' || FR_HOUR || ' ~ ' || to_dt || ' ' || TO_HOUR AS plan_date_det  */
+                from comm121
+                where SCHAFF_SCHE_FG = 'U000500003'
+                and SCHYY           = T1.OPEN_SCHYY
+                AND SHTM_FG         = T1.OPEN_SHTM_FG
+                AND DETA_SHTM_FG  = T1.OPEN_DETA_SHTM_FG
+                AND bdegr_system_fg = 'U000100001'
+                AND DETA_BUSS_CD = 'A0167' ) as plan_date
+              ,(select fr_dt || ' ~ ' || to_dt
+                       /*  fr_dt || ' ' || FR_HOUR || ' ~ ' || to_dt || ' ' || TO_HOUR AS plan_date_det  */
+                from comm121
+                where SCHAFF_SCHE_FG = 'U000500003'
+                and SCHYY           = T1.OPEN_SCHYY
+                AND SHTM_FG         = T1.OPEN_SHTM_FG
+                AND DETA_SHTM_FG  = T1.OPEN_DETA_SHTM_FG
+                AND bdegr_system_fg = 'U000100001'
+                AND DETA_BUSS_CD = 'A0168' ) as rprt_date
 
+          FROM COUR623 T1
+              ,BSNS100 T2
+              ,V_SREG101 T3
+              ,COUR100 T4
+              ,COUR624 T5
+              ,COUR625 T6
+         WHERE T1.MNGT_DEPT_CD       = T2.DEPT_CD
+           AND T1.STUNO              = T3.STUNO
+           AND T1.SBJT_NO            = T4.SBJT_CD(+)
+           AND T1.OPEN_SCHYY    = T5.OPEN_SCHYY (+)
+           AND T1.OPEN_SHTM_FG      = T5.OPEN_SHTM_FG (+)
+           AND T1.OPEN_DETA_SHTM_FG = T5.OPEN_DETA_SHTM_FG (+)
+           AND T1.MNGT_DEPT_CD      = T5.MNGT_DEPT_CD (+)
+           AND T1.STUNO             = T5.STUNO (+)
+           AND T1.LT_ASSIST_INPT_SEQ = T5.LT_ASSIST_INPT_SEQ (+)
+           AND T1.OPEN_SCHYY    = T6.OPEN_SCHYY (+)
+           AND T1.OPEN_SHTM_FG      = T6.OPEN_SHTM_FG (+)
+           AND T1.OPEN_DETA_SHTM_FG = T6.OPEN_DETA_SHTM_FG (+)
+           AND T1.MNGT_DEPT_CD      = T6.MNGT_DEPT_CD (+)
+           AND T1.STUNO             = T6.STUNO (+)
+           AND T1.LT_ASSIST_INPT_SEQ = T6.LT_ASSIST_INPT_SEQ (+)
 
-SELECT to_char(SYSDATE,'MMDD') FROM dual ;
+         and T1.STUNO              = '93601-009' ;
 
+           
+           
+SELECT * FROM acck100      ;
 
-SELECT std_kor_nm, exam_no, SUBSTR(res_no,1,6) 
-FROM enro400 WHERE entr_schyy = '2020' AND select_fg = 'U061800025' ;
+select * FROM SREG101 ;
 
-
-SELECT CMMN_CD, KOR_NM, A.*
-FROM BSNS011 A
-WHERE A.GRP_CD = 'C0133'
-ORDER BY A.DISP_ORD, A.CMMN_CD
-;
-
-SELECT * FROM esin601 ;
-SELECT * FROM sreg101 ;
-SELECT * FROM bsns031 ;
-
-
-SELECT B.PERS_NO AS STUNO
-     , B.STD_FG
-     , C.PROG_CORS_FG
-     , a.*
-  FROM ESIN601_DAMO A
-     , BSNS031_DAMO B
-     , SREG101 C
- WHERE A.SEC_RES_NO  = B.SEC_RES_NO
-   AND B.PERS_NO = C.STUNO 
-   AND B.STD_FG IN ('U030500002', 'U030500001' ) -- 'U030500006', 'U030500007')  --정규, 연구, 국내교환IN, 국제교환IN
-   
-   AND C.PROG_CORS_FG = 'C013300001'    -- 학사 1 , 석사 2
-   AND a.exam_no = '24010'
-;
-
-/* ESIN601.find02 지원사항관리 - 지원자관리 - 학력 - 성적표 출력키 위한 학번조회 */ SELECT B.PERS_NO AS STUNO FROM ESIN601_DAMO 
-A , BSNS031_DAMO B , SREG101 C WHERE A.SEC_RES_NO = B.SEC_RES_NO AND B.PERS_NO = C.STUNO AND 
-B.STD_FG IN ('U030500002', 'U030500001') AND C.PROG_CORS_FG = 'C013300002' AND A.COLL_UNIT_NO 
-IN ( '202001020115028008011N' , '202001020115028008011N' , '202001020115028008011O' , '202001020115028008011S' 
-, '202001020115028008011S' , '202001020115028008011S' , '202001020115028008011S' , '202001020115028008011S' 
-, '202001020115028008012V' , '202001020115028008011X' , '202001020115028008011Z' ) AND A.EXAM_NO 
-IN ( '24008' , '24010' , '24011' , '24012' , '24013' , '24014' , '24015' , '24017' , '24018' 
-, '24019' , '24020' ) ORDER BY A.EXAM_NO;
-
-
-SELECT CMMN_CD, KOR_NM, A.*
-FROM BSNS011 A
-WHERE A.GRP_CD = 'U0258'
-ORDER BY A.DISP_ORD, A.CMMN_CD
-;
-
-		SELECT CMMN_CD
-			 , KOR_NM
-             , CASE WHEN TO_CHAR(SYSDATE,'MMDD') >= '0301' AND TO_CHAR(SYSDATE,'MMDD') < '0901' THEN '2' ELSE '1' END  AS DISP_ORD
-		  FROM BSNS011 ;
-
-SELECT CMMN_CD
-             , KOR_NM
-             , CASE WHEN CMMN_CD = 'U025800001' AND TO_CHAR(SYSDATE,'MMDD') >= '0301' AND TO_CHAR(SYSDATE,'MMDD') <'0901' THEN '2' 
-                    WHEN CMMN_CD = 'U025800002' AND TO_CHAR(SYSDATE,'MMDD') >= '0301' AND TO_CHAR(SYSDATE,'MMDD') <'0901' THEN '1' 
-               ELSE '1' END AS DISP_ORD
-          FROM BSNS011
-         WHERE CMMN_CD IN (
-                SELECT COLL_FG
-                  FROM ESIN502
-                 WHERE SELECT_FG = 'U025700001'
-                   AND SELECT_YY = '2020'
-               )
-      ORDER BY DISP_ORD, CMMN_CD ;
-
-
-   /* ESIN690.find01 지원사항관리 - 지원자관리 - 학력조회동의 조회 */
-   SELECT B.SELECT_YY,
-          B.SELECT_FG,
-          B.COLL_FG,
-          B.APLY_QUAL_FG,
-          B.DETA_APLY_QUAL_FG,
-          B.APLY_CORS_FG,
-          B.APLY_COLG_FG,
-          B.APLY_COLL_UNIT_CD,
-          B.DAYNGT_FG,
-          B.SPCMAJ_CD,
-          B.RECV_NO,
-          C.APLIER_KOR_NM,
-          C.ENG_NM,
-          B.BIRTH_DT,
-          A.COLL_UNIT_NO,
-          A.EXAM_NO,
-          A.UNIVS_NM,
-          A.SUST_NM,
-          A.GRDT_DT,
-          A.SCHCR_INQ_RESP_DEPT_NM,
-          A.SCHCR_INQ_RESP_EMAIL,
-          A.DEGR_NM,
-          A.SCHCR_INQ_CONSNT_YN,
-          A.INPT_ID,
-          A.INPT_DTTM,
-          A.INPT_IP,
-          NVL2(A.MOD_ID, A.MOD_ID, A.INPT_ID) AS MOD_ID,
-          NVL2(A.MOD_DTTM, A.MOD_DTTM, A.INPT_DTTM) AS MOD_DTTM,
-          NVL2(A.MOD_IP, A.MOD_IP, A.INPT_IP) AS MOD_IP,
-          SF_BSNS011_CODENM(B.SELECT_FG, '1') AS SELECT_FG_NM,
-          SF_BSNS011_CODENM(B.COLL_FG, '1') AS COLL_FG_NM,
-          SF_BSNS011_CODENM(B.APLY_QUAL_FG, '1') AS APLY_QUAL_FG_NM,
-          SF_BSNS011_CODENM(B.DETA_APLY_QUAL_FG, '1') AS DETA_APLY_QUAL_FG_NM,
-          SF_BSNS011_CODENM(B.APLY_CORS_FG, '1') AS APLY_CORS_FG_NM,
-          SF_BSNS011_CODENM(B.APLY_COLG_FG, '1') AS APLY_COLG_FG_NM,
-          DECODE(D.DEPT_TYPE,
-                 'D',
-                 D.DEPT_KOR_NM,
-                 'M',
-                 D.DEPARTMENT_KOR_NM || ' > ' || D.DEPT_KOR_NM) AS APLY_COLL_UNIT_CD_NM,
-          SF_BSNS011_CODENM(B.DAYNGT_FG, '1') AS DAYNGT_FG_NM,
-               SF_BSNS011_CODENM(E.PASS_SCRN_FG,'1') AS PASS_SCRN_FG                  /* 합격사정구분                            */
-             , SF_BSNS011_CODENM(E.PASS_DISQ_FG,'1') AS PASS_DISQ_FG                 /* 합격불합격구분                          */
-             , SF_BSNS011_CODENM(E.STP_PASS_SEQ_FG,'1')	AS STP_PASS_SEQ_FG           /* 충원합격차수구분                        */
-             , SF_BSNS011_CODENM(E.STP_PASS_FG,'1') AS STP_PASS_FG	               /* 충원합격구분                            */          
-     FROM ESIN690     A,
-          ESIN600     B,
-          ESIN601     C,
-          V_COMM111_6 D,
-          ( SELECT COLL_UNIT_NO, EXAM_NO, PASS_SCRN_FG, PASS_DISQ_FG, STP_PASS_SEQ_FG, STP_PASS_FG  
-            FROM ESIN606
-            WHERE SCRN_STG_FG IN ('U027200002', 'U027200003' )
-            --AND PASS_DISQ_FG = 'U024300005' 
-            ) E
-    WHERE A.COLL_UNIT_NO = B.COLL_UNIT_NO
-      AND A.COLL_UNIT_NO = C.COLL_UNIT_NO
-      AND A.COLL_UNIT_NO = E.COLL_UNIT_NO (+)
-      AND A.EXAM_NO = B.EXAM_NO
-      AND A.EXAM_NO = C.EXAM_NO
-      AND A.EXAM_NO = E.EXAM_NO (+)
-      AND B.APLY_COLL_UNIT_CD = D.DEPT_CD(+)
-      AND SELECT_FG = 'U025700001'
-      AND SELECT_YY = '2020'
-      AND COLL_FG = 'U025800002'
-    ORDER BY A.EXAM_NO;
+comm121 ;
+comm123 ;
+comm210 ;
