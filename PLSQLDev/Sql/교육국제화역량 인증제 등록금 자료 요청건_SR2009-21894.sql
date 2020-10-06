@@ -1,5 +1,4 @@
 -- SR2009-21894 : 교육국제화역량 인증제 등록금 자료 요청건
-
 SELECT A.SCHYY,
        A.SHTM_FG,
        A.STUNO,
@@ -26,14 +25,15 @@ SELECT A.SCHYY,
             AND X.STUNO = A.STUNO
             AND X.RECIV_YN = 'Y' ) AS "분납자최종입금일자"       
             
-  FROM ENRO200 A,           -- TEMP TABLE 정의
+  FROM TEMP_20200925 A,           -- TEMP TABLE 정의
        ENRO200 B
        
- WHERE A.SCHYY = B.SCHYY
-   AND A.SHTM_FG = B.SHTM_FG
+ WHERE A.SCHYY = B.SCHYY (+)
+   AND A.SHTM_FG = B.SHTM_FG (+)
    AND A.STUNO = B.STUNO (+)
-   AND A.SCHYY = '2019'
+   AND A.SCHYY = '2020'
    AND A.SHTM_FG = 'U000200001'
+   AND B.DETA_SHTM_FG = 'U000300001'
 ;
 
 
